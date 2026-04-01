@@ -4,6 +4,8 @@ import { AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import GeneratorPage from './pages/GeneratorPage';
+import Dashboard from './pages/Dashboard';
+import IdeaDetail from './pages/IdeaDetail';
 import SavedIdeasPage from './pages/SavedIdeasPage';
 import AuthPage from './pages/AuthPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,6 +18,12 @@ function AnimatedRoutes() {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/idea/:id" element={<IdeaDetail />} />
         <Route path="/generate" element={<GeneratorPage />} />
         <Route
           path="/saved"

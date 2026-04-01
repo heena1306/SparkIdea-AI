@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import { Sparkles, Terminal, BookOpen, Layers, ArrowUp } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Sparkles, Terminal, BookOpen, Layers, ArrowUp, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import IdeaCard from '../components/IdeaCard';
 
-const pageVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.3 } }
-};
+const SKILLS_SUGGESTIONS = [
+  'React', 'Node.js', 'Python', 'AI', 'Machine Learning', 
+  'Web Dev', 'Mobile Dev', 'AWS', 'Firebase', 'TypeScript',
+  'Next.js', 'Tailwind CSS', 'MongoDB', 'PostgreSQL', 'Docker'
+];
 
-const inputVariants = {
-  hidden: { opacity: 0, scale: 0.9, y: 20 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.2, type: "spring", stiffness: 120, damping: 20 } }
-};
+const INTERESTS_SUGGESTIONS = [
+  'Fintech', 'Healthtech', 'E-commerce', 'Crypto', 'Gaming',
+  'Education', 'Social Media', 'Productivity', 'Sustainability',
+  'Cybersecurity', 'Automation', 'Real Estate', 'Travel', 'Music'
+];
 
 const GeneratorPage = () => {
   const [formData, setFormData] = useState({
@@ -22,110 +22,225 @@ const GeneratorPage = () => {
     level: 'beginner'
   });
   
-  // New Array payload hook for V8 execution
   const [ideas, setIdeas] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [error, setError] = useState(null);
+  
+  const [showSkillsSuggestions, setShowSkillsSuggestions] = useState(false);
+  const [showInterestsSuggestions, setShowInterestsSuggestions] = useState(false);
+  
+  const skillsRef = useRef(null);
+  const interestsRef = useRef(null);
+
+  const generateSmartIdeas = (skills, interest, level) => {
+    // This is a mock AI generation logic
+    const baseIdeas = [
+      {
+        title: `${interest} Analytics Platform`,
+        description: `A sophisticated dashboard for tracking and analyzing ${interest} trends using ${skills[0] || 'modern tech'}.`,
+        techStack: [...skills.slice(0, 3), 'React', 'Tailwind CSS', 'Chart.js'],
+        features: ['Real-time data tracking', 'Predictive analytics', 'Custom report generation', 'User authentication'],
+        difficulty: level.charAt(0).toUpperCase() + level.slice(1),
+        estimatedTime: level === 'beginner' ? '2-3 weeks' : level === 'intermediate' ? '1-2 months' : '3-4 months',
+        roadmap: [
+          { step: 1, title: 'Project Setup', desc: 'Initialize the repository and setup the basic architecture.' },
+          { step: 2, title: 'Core Implementation', desc: 'Build the primary data processing engines.' },
+          { step: 3, title: 'UI/UX Polish', desc: 'Design and implement the user interface with smooth transitions.' }
+        ],
+        githubStructure: ['src/components', 'src/hooks', 'src/services', 'src/utils', 'api/routes']
+      },
+      {
+        title: `AI-Powered ${interest} Assistant`,
+        description: `An intelligent assistant that helps users manage their ${interest} workflows more efficiently.`,
+        techStack: [...skills.slice(0, 2), 'OpenAI API', 'Node.js', 'Next.js'],
+        features: ['Natural language processing', 'Automated task scheduling', 'Smart recommendations', 'Multi-device sync'],
+        difficulty: level.charAt(0).toUpperCase() + level.slice(1),
+        estimatedTime: level === 'beginner' ? '3-4 weeks' : level === 'intermediate' ? '2-3 months' : '4-5 months',
+        roadmap: [
+          { step: 1, title: 'AI Integration', desc: 'Configure LLM endpoints and prompt engineering.' },
+          { step: 2, title: 'Frontend Development', desc: 'Create a conversational UI for the assistant.' },
+          { step: 3, title: 'Beta Testing', desc: 'Gather user feedback and optimize AI responses.' }
+        ],
+        githubStructure: ['src/ai', 'src/components', 'src/context', 'server/controllers', 'docs/api']
+      },
+      {
+        title: `Open Source ${interest} Tool`,
+        description: `A community-driven tool designed to solve common problems in the ${interest} sector.`,
+        techStack: [...skills.slice(0, 4), 'TypeScript', 'Docker', 'GitHub Actions'],
+        features: ['Plugin architecture', 'Comprehensive API documentation', 'Community contribution guide', 'High performance'],
+        difficulty: level.charAt(0).toUpperCase() + level.slice(1),
+        estimatedTime: level === 'beginner' ? '1-2 weeks' : level === 'intermediate' ? '1 month' : '2-3 months',
+        roadmap: [
+          { step: 1, title: 'Discovery', desc: 'Identify core pain points in the current ecosystem.' },
+          { step: 2, title: 'MVP Build', desc: 'Focus on the most critical feature for launch.' },
+          { step: 3, title: 'Scaling', desc: 'Optimize for performance and add more advanced features.' }
+        ],
+        githubStructure: ['src/core', 'src/plugins', 'tests/unit', 'configs', 'scripts']
+      }
+    ];
+    return baseIdeas;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const dataToSubmit = {
-      ...formData,
-      skills: formData.skills.split(',').map(s => s.trim()).filter(s => s !== '')
-    };
+    const skillsArray = formData.skills.split(',').map(s => s.trim()).filter(s => s !== '');
     
     setIsLoading(true);
     setIdeas([]);
     setError(null);
     
-    console.log("Transmitting generation payload:", dataToSubmit);
     try {
-      const response = await axios.post('http://localhost:5000/api/generate-idea', dataToSubmit);
-      console.log("Received AI architecture data:", response.data);
-      setIdeas(response.data);
+      // Simulate AI generation delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const generatedIdeas = generateSmartIdeas(skillsArray, formData.interest, formData.level);
+      setIdeas(generatedIdeas);
+      
+      // Track generated count
+      const currentCount = parseInt(localStorage.getItem('generatedCount') || '0');
+      localStorage.setItem('generatedCount', (currentCount + 1).toString());
+      
+      // Store last generated idea for dashboard
+      localStorage.setItem('lastGeneratedIdea', JSON.stringify(generatedIdeas[0]));
+      
     } catch (err) {
-      console.error("API Generation Failure:", err);
-      // Gracefully capture backend structure or generic network error
-      const message = err.response?.data?.error || err.response?.data?.details || err.message || "Unknown Application Error";
-      setError(message);
+      setError("Failed to generate ideas. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleSuggestionClick = (type, value) => {
+    if (type === 'skills') {
+      const current = formData.skills ? formData.skills.split(',').map(s => s.trim()) : [];
+      if (!current.includes(value)) {
+        const newValue = [...current, value].join(', ');
+        setFormData({ ...formData, skills: newValue });
+      }
+      setShowSkillsSuggestions(false);
+    } else {
+      setFormData({ ...formData, interest: value });
+      setShowInterestsSuggestions(false);
+    }
+  };
+
   return (
-    <motion.div 
-      variants={pageVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      className="flex flex-col items-center w-full max-w-[100rem] mx-auto flex-grow mt-12 transition-colors duration-500"
-    >
+    <div className="flex flex-col items-center w-full max-w-[100rem] mx-auto flex-grow mt-12 px-4">
       
-      {/* Background Mesh Acceleration Overlay Triggered by Focus */}
       <div className={`fixed inset-0 z-[-1] pointer-events-none transition-all duration-1000 ${isFocused ? 'opacity-100 scale-105 filter saturate-150' : 'opacity-0 scale-100'}`}>
          <div className="absolute top-1/4 left-1/4 w-[50%] h-[50%] bg-[#3B82F6]/10 rounded-full mix-blend-multiply filter blur-[100px] animate-pulse"></div>
          <div className="absolute top-1/3 right-1/4 w-[50%] h-[50%] bg-[#A855F7]/10 rounded-full mix-blend-multiply filter blur-[100px] animate-pulse" style={{animationDelay: '1s'}}></div>
       </div>
 
-      <div className="text-center mb-16 relative z-10">
+      <div className="text-center mb-16">
          <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-[#0F172A] transition-colors duration-500"
+            className="text-4xl md:text-6xl font-[900] mb-4 tracking-tight text-[#0F172A]"
          >
            What do you want to build?
          </motion.h1>
          <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            className="text-slate-500 text-lg transition-colors duration-500 font-medium"
+            className="text-slate-500 text-lg font-medium"
          >
-           Define parameters and let AI output the architecture.
+           Define your stack and interests, and let AI generate your next masterpiece.
          </motion.p>
       </div>
 
-      <motion.div variants={inputVariants} className="w-full max-w-4xl relative z-20 mb-20 group">
-         <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-full blur-xl opacity-50 group-hover:opacity-100 transition duration-500 pointer-events-none"></div>
-         <form onSubmit={handleSubmit} className="relative glass-card !rounded-full p-2 pl-8 flex items-center border-slate-200 group/form focus-within:border-blue-200 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-300 bg-white/80 shadow-md">
+      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-5xl mb-20">
+         <form onSubmit={handleSubmit} className="glass-card !rounded-3xl md:!rounded-full p-2 md:pl-8 flex flex-col md:flex-row items-center border-slate-200 bg-white/80 shadow-xl relative z-30">
             
-            <div className="flex-1 flex items-center gap-4 w-full group/icon">
-              <Terminal className="w-6 h-6 dual-tone-icon transition-colors" />
-              <input required type="text" placeholder="Skills (React, AWS)" value={formData.skills} 
-                 onChange={e => setFormData({...formData, skills: e.target.value})} 
-                 onFocus={() => setIsFocused(true)}
-                 onBlur={() => setIsFocused(false)}
-                 className="w-full bg-transparent border-none text-[#0F172A] focus:ring-0 focus:outline-none placeholder-slate-400 font-bold py-4 text-base md:text-lg" 
-              />
+            <div className="w-full md:flex-1 relative" ref={skillsRef}>
+              <div className="flex items-center gap-4 px-4 py-3 md:py-0">
+                <Terminal className="w-6 h-6 text-primary" />
+                <input 
+                  required 
+                  type="text" 
+                  placeholder="Skills (React, Python...)" 
+                  value={formData.skills} 
+                  onChange={e => setFormData({...formData, skills: e.target.value})} 
+                  onFocus={() => { setIsFocused(true); setShowSkillsSuggestions(true); }}
+                  onBlur={() => { setIsFocused(false); setTimeout(() => setShowSkillsSuggestions(false), 200); }}
+                  className="w-full bg-transparent border-none text-[#0F172A] focus:ring-0 focus:outline-none placeholder-slate-400 font-bold text-lg" 
+                />
+              </div>
+              <AnimatePresence>
+                {showSkillsSuggestions && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 p-2 grid grid-cols-2 sm:grid-cols-3 gap-1"
+                  >
+                    {SKILLS_SUGGESTIONS.map(skill => (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => handleSuggestionClick('skills', skill)}
+                        className="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-primary rounded-xl transition-colors text-left"
+                      >
+                        {skill}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             
-            <div className="hidden md:block w-[1px] h-10 bg-slate-200 mx-4"></div>
+            <div className="hidden md:block w-[1px] h-10 bg-slate-200 mx-2"></div>
             
-            <div className="hidden md:flex flex-1 items-center gap-4 px-2 w-full group/icon hover:-translate-y-0.5 transition-transform">
-              <BookOpen className="w-6 h-6 dual-tone-icon transition-colors" />
-              <input required type="text" placeholder="Interests (Crypto, AI)" value={formData.interest} 
-                 onChange={e => setFormData({...formData, interest: e.target.value})} 
-                 onFocus={() => setIsFocused(true)}
-                 onBlur={() => setIsFocused(false)}
-                 className="w-full bg-transparent border-none text-[#0F172A] focus:ring-0 focus:outline-none placeholder-slate-400 font-bold py-4 text-base md:text-lg" 
-              />
+            <div className="w-full md:flex-1 relative" ref={interestsRef}>
+              <div className="flex items-center gap-4 px-4 py-3 md:py-0">
+                <BookOpen className="w-6 h-6 text-secondary" />
+                <input 
+                  required 
+                  type="text" 
+                  placeholder="Interests (Crypto, AI...)" 
+                  value={formData.interest} 
+                  onChange={e => setFormData({...formData, interest: e.target.value})} 
+                  onFocus={() => { setIsFocused(true); setShowInterestsSuggestions(true); }}
+                  onBlur={() => { setIsFocused(false); setTimeout(() => setShowInterestsSuggestions(false), 200); }}
+                  className="w-full bg-transparent border-none text-[#0F172A] focus:ring-0 focus:outline-none placeholder-slate-400 font-bold text-lg" 
+                />
+              </div>
+              <AnimatePresence>
+                {showInterestsSuggestions && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 p-2 grid grid-cols-2 sm:grid-cols-3 gap-1"
+                  >
+                    {INTERESTS_SUGGESTIONS.map(interest => (
+                      <button
+                        key={interest}
+                        type="button"
+                        onClick={() => handleSuggestionClick('interest', interest)}
+                        className="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-purple-50 hover:text-secondary rounded-xl transition-colors text-left"
+                      >
+                        {interest}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            <div className="hidden md:block w-[1px] h-10 bg-slate-200 mx-4"></div>
+            <div className="hidden md:block w-[1px] h-10 bg-slate-200 mx-2"></div>
 
-            <div className="hidden md:flex items-center gap-2 px-2 w-auto group/icon hover:-translate-y-0.5 transition-transform">
-              <Layers className="w-6 h-6 dual-tone-icon" />
-              <select value={formData.level} onChange={e => setFormData({...formData, level: e.target.value})} 
-                 onFocus={() => setIsFocused(true)}
-                 onBlur={() => setIsFocused(false)}
-                 className="bg-transparent border-none text-[#0F172A] focus:ring-0 focus:outline-none cursor-pointer py-4 appearance-none font-bold text-center text-base pr-6"
+            <div className="w-full md:w-auto flex items-center gap-2 px-4 py-3 md:py-0">
+              <Layers className="w-6 h-6 text-amber-500" />
+              <select 
+                value={formData.level} 
+                onChange={e => setFormData({...formData, level: e.target.value})} 
+                className="bg-transparent border-none text-[#0F172A] focus:ring-0 focus:outline-none cursor-pointer appearance-none font-bold text-lg pr-8"
               >
-                <option value="beginner" className="bg-white">Beginner</option>
-                <option value="intermediate" className="bg-white">Intermediate</option>
-                <option value="advanced" className="bg-white">Advanced</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
               </select>
             </div>
 
@@ -134,99 +249,49 @@ const GeneratorPage = () => {
                whileTap={{ scale: 0.95 }}
                type="submit" 
                disabled={isLoading} 
-               className={`ml-4 w-16 h-16 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-lg ${isLoading ? 'bg-blue-50 text-primary animate-pulse cursor-not-allowed border border-blue-200' : 'glow-button border-none'}`}
+               className={`w-full md:w-16 h-14 md:h-16 md:rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-lg rounded-2xl mt-2 md:mt-0 ${isLoading ? 'bg-blue-50 text-primary animate-pulse cursor-not-allowed' : 'glow-button border-none'}`}
             >
-               {isLoading ? <Sparkles className="w-6 h-6" /> : <ArrowUp className="w-8 h-8 stroke-[3px]" />}
+               {isLoading ? <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div> : <ArrowUp className="w-8 h-8 stroke-[3px]" />}
             </motion.button>
          </form>
-
-         {/* Mobile Extra Fields (Floating Dropdown) */}
-         <div className="md:hidden mt-4 flex flex-col gap-3">
-             <div className="glass-card !rounded-[1.5rem] p-4 flex items-center gap-4 border border-slate-200 focus-within:border-blue-200 shadow-sm bg-white/80">
-                <BookOpen className="w-5 h-5 dual-tone-icon" />
-                <input required type="text" placeholder="Interests (Crypto, AI)" value={formData.interest} 
-                   onChange={e => setFormData({...formData, interest: e.target.value})} 
-                   onFocus={() => setIsFocused(true)}
-                   onBlur={() => setIsFocused(false)}
-                   className="w-full bg-transparent border-none text-slate-800 focus:ring-0 focus:outline-none placeholder-slate-400 font-bold text-base" 
-                />
-             </div>
-             <div className="glass-card !rounded-[1.5rem] p-4 flex items-center gap-4 border border-slate-200 focus-within:border-blue-200 shadow-sm bg-white/80">
-                <Layers className="w-5 h-5 dual-tone-icon" />
-                <select value={formData.level} onChange={e => setFormData({...formData, level: e.target.value})} 
-                   onFocus={() => setIsFocused(true)}
-                   onBlur={() => setIsFocused(false)}
-                   className="w-full bg-transparent border-none text-slate-800 focus:ring-0 focus:outline-none cursor-pointer appearance-none font-bold text-base"
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-             </div>
-         </div>
       </motion.div>
 
       <AnimatePresence mode="wait">
-        <motion.div layout className="w-full transition-all mt-4 relative z-10 mb-20">
-           
-           {/* Explicit Error Interface */}
-           {error && !isLoading && (
-              <motion.div 
-                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                 exit={{ opacity: 0, scale: 0.95 }}
-                 className="w-full max-w-3xl mx-auto glass-card border border-red-200 bg-red-50/80 p-6 flex items-start gap-4 shadow-sm mb-12"
-              >
-                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1 border border-red-200">
-                    <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                 </div>
-                 <div>
-                    <h3 className="text-xl font-[800] text-red-700 mb-2">Generation Failed</h3>
-                    <p className="text-red-600/80 font-medium font-mono text-sm leading-relaxed p-3 bg-white/50 rounded-xl border border-red-100">{error}</p>
-                 </div>
-              </motion.div>
-           )}
-
+        <div className="w-full mb-20">
            {isLoading && (
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                 {[1,2,3].map(i => (
-                    <motion.div 
-                       key={i}
-                       initial={{ opacity: 0, y: 20 }}
-                       animate={{ opacity: 1, y: 0 }}
-                       exit={{ opacity: 0, scale: 0.9 }}
-                       transition={{ delay: i * 0.1 }}
-                       className="glass-card p-10 animate-pulse border-blue-100 bg-white/50 w-full"
-                    >
-                       <div className="h-6 w-32 bg-blue-50 border border-blue-100/50 rounded-full mb-6"></div>
-                       <div className="h-10 w-3/4 bg-slate-100 rounded-lg mb-8"></div>
-                       <div className="h-4 w-full bg-slate-100 rounded-lg mb-4"></div>
-                       <div className="h-4 w-5/6 bg-slate-100 rounded-lg mb-4"></div>
-                       <div className="grid grid-cols-1 gap-4 mt-12">
-                         <div className="h-32 bg-blue-50/50 rounded-2xl border border-blue-100/30"></div>
-                         <div className="h-32 bg-purple-50/50 rounded-2xl border border-purple-100/30"></div>
-                       </div>
-                    </motion.div>
-                 ))}
+              <div className="text-center py-20">
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full mx-auto mb-6"
+                />
+                <h2 className="text-2xl font-black text-slate-900 animate-pulse">Generating ideas…</h2>
+                <p className="text-slate-500 font-medium mt-2">Our AI is architecting your next project</p>
               </div>
            )}
+
            {ideas.length > 0 && !isLoading && (
              <motion.div 
-                initial="hidden"
-                animate="visible"
-                variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.15 } } }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="grid grid-cols-1 xl:grid-cols-3 gap-8"
              >
                 {ideas.map((idea, index) => (
-                  <IdeaCard key={idea.id || index} idea={idea} />
+                  <IdeaCard key={index} idea={{...idea, id: index + 1}} />
                 ))}
              </motion.div>
            )}
-        </motion.div>
+
+           {ideas.length === 0 && !isLoading && !error && (
+             <div className="text-center py-20 opacity-20">
+               <Sparkles className="w-20 h-20 mx-auto mb-4" />
+               <p className="text-2xl font-black">Ready to spark an idea?</p>
+             </div>
+           )}
+        </div>
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
+
 export default GeneratorPage;

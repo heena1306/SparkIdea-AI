@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Layers, Box, Check, Clock, Activity, ChevronDown, ChevronUp, Save, FileCode2, Copy, X } from 'lucide-react';
+import { Layers, Box, Check, Clock, Activity, ChevronDown, ChevronUp, Save, FileCode2, Copy, X, Download, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const cardVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 30 },
@@ -16,12 +17,14 @@ const cardVariants = {
 const IdeaCard = ({ idea }) => {
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
   const [showReadme, setShowReadme] = useState(false);
+  const navigate = useNavigate();
 
   // Initialise from localStorage so button reflects persisted state on re-render
   const [isSaved, setIsSaved] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-      return saved.some(i => i.title === idea?.title);
+      const user = JSON.parse(localStorage.getItem('authUser') || 'null');
+      return saved.some(i => i.title === idea?.title && (user ? i.userEmail === user.email : true));
     } catch {
       return false;
     }
@@ -32,8 +35,10 @@ const IdeaCard = ({ idea }) => {
   const handleSave = () => {
     try {
       let saved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-      // Prevent duplicates — check by title
-      if (!saved.find(i => i.title === idea.title)) {
+      const user = JSON.parse(localStorage.getItem('authUser') || 'null');
+      
+      // Prevent duplicates — check by title and userEmail
+      if (!saved.find(i => i.title === idea.title && (user ? i.userEmail === user.email : true))) {
         const ideaToSave = {
           title: idea.title,
           description: idea.description,
@@ -42,6 +47,8 @@ const IdeaCard = ({ idea }) => {
           difficulty: idea.difficulty,
           estimatedTime: idea.estimatedTime,
           roadmap: idea.roadmap,
+          githubStructure: idea.githubStructure,
+          userEmail: user?.email || null,
           savedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         };
         saved.push(ideaToSave);
@@ -54,12 +61,64 @@ const IdeaCard = ({ idea }) => {
   };
 
   const generateReadmeText = () => {
-    return `# ${idea.title}\n\n${idea.description}\n\n## 🚀 Tech Stack\n${idea.techStack ? idea.techStack.map(t => `- ${t}`).join('\n') : ''}\n\n## ✨ Features\n${idea.features ? idea.features.map(f => `- ${f}`).join('\n') : ''}\n\n## 📂 Architecture\n\`\`\`\n${idea.githubStructure ? idea.githubStructure.join('\n') : ''}\n\`\`\`\n\n## 🗺️ Build Roadmap\n${idea.roadmap ? idea.roadmap.map(r => `### Step ${r.step}: ${r.title}\n${r.desc}\n`).join('\n') : ''}\n`;
+    return `# ${idea.title}
+
+${idea.description}
+
+## 🚀 Tech Stack
+${idea.techStack ? idea.techStack.map(t => `- ${t}`).join('\n') : ''}
+
+## ✨ Features
+${idea.features ? idea.features.map(f => `- ${f}`).join('\n') : ''}
+
+## 📂 Architecture
+\`\`\`
+${idea.githubStructure ? idea.githubStructure.join('\n') : ''}
+\`\`\`
+
+## 🛠️ Installation Steps
+1. Clone the repository:
+   \`\`\`bash
+   git clone https://github.com/yourusername/${idea.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.git
+   \`\`\`
+2. Install dependencies:
+   \`\`\`bash
+   npm install
+   \`\`\`
+3. Start the development server:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+
+## 🗺️ Build Roadmap
+${idea.roadmap ? idea.roadmap.map(r => `### Step ${r.step}: ${r.title}\n${r.desc}\n`).join('\n') : ''}
+`;
   };
 
   const copyReadme = () => {
     navigator.clipboard.writeText(generateReadmeText());
-    alert('README copied to clipboard!');
+    // Better toast feedback
+    const original = document.activeElement?.textContent;
+    const btn = document.querySelector('.glow-button') || event.target;
+    btn.textContent = 'Copied!';
+    btn.style.background = '#10b981';
+    setTimeout(() => {
+      btn.textContent = original || 'Copy README';
+      btn.style.background = '';
+    }, 1500);
+  };
+
+  const downloadReadme = () => {
+    const content = generateReadmeText();
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${idea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_readme.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -94,13 +153,29 @@ const IdeaCard = ({ idea }) => {
                 >
                   <Save className="w-3.5 h-3.5" /> {isSaved ? 'Saved ✓' : 'Save'}
                 </motion.button>
-                <motion.button
+              <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate(`/idea/${idea.id}`, { state: { idea } })}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all duration-300 border bg-primary text-white hover:shadow-[0_0_12px_rgba(59,130,246,0.4)] hover:bg-blue-600"
+                >
+                  View Details
+                </motion.button>
+              <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowReadme(true)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all duration-300 border bg-slate-900 border-slate-800 text-white hover:shadow-[0_0_12px_rgba(15,23,42,0.3)]"
                 >
                   <FileCode2 className="w-3.5 h-3.5" /> README
+                </motion.button>
+                <motion.button
+                  onClick={downloadReadme}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all duration-300 border bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download
                 </motion.button>
               </div>
             </div>

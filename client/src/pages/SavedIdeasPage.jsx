@@ -157,17 +157,29 @@ const SavedIdeasPage = () => {
   useEffect(() => {
     try {
       const data = localStorage.getItem('savedIdeas');
-      if (data) setSavedIdeas(JSON.parse(data));
+      const user = JSON.parse(localStorage.getItem('authUser') || 'null');
+      if (data) {
+        let ideas = JSON.parse(data);
+        if (user) {
+          // If logged in, show only that user's saved ideas
+          ideas = ideas.filter(i => i.userEmail === user.email);
+        }
+        setSavedIdeas(ideas);
+      }
     } catch {
       setSavedIdeas([]);
     }
   }, []);
 
-  // Remove by title (title is the unique identifier)
+  // Remove by title and userEmail
   const removeIdea = (title) => {
-    const filtered = savedIdeas.filter(idea => idea.title !== title);
-    setSavedIdeas(filtered);
+    const user = JSON.parse(localStorage.getItem('authUser') || 'null');
+    const allSaved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
+    const filtered = allSaved.filter(idea => !(idea.title === title && (user ? idea.userEmail === user.email : true)));
     localStorage.setItem('savedIdeas', JSON.stringify(filtered));
+    
+    // Update local state to reflect removal
+    setSavedIdeas(savedIdeas.filter(idea => idea.title !== title));
   };
 
   return (

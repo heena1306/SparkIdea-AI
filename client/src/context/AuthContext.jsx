@@ -15,10 +15,13 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
+  const [generatedCount, setGeneratedCount] = useState(() => parseInt(localStorage.getItem('generatedCount') || '0'));
 
   const login = useCallback((newToken, newUser) => {
     localStorage.setItem(TOKEN_KEY, newToken);
     localStorage.setItem(USER_KEY, JSON.stringify(newUser));
+    const count = parseInt(localStorage.getItem('generatedCount') || '0');
+    setGeneratedCount(count);
     setToken(newToken);
     setUser(newUser);
   }, []);
@@ -31,7 +34,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, user, isAuthenticated: !!token, login, logout }}>
+    <AuthContext.Provider value={{ token, user, generatedCount, isAuthenticated: !!token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

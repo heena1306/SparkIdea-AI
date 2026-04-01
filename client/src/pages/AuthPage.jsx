@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import { Eye, EyeOff, Sparkles, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-const API = 'http://localhost:5000/api/auth';
 
 const inputClass =
   'w-full bg-white/80 border border-slate-200 rounded-xl px-5 py-3.5 text-charcoal text-sm font-semibold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200 shadow-sm placeholder-slate-400';
@@ -22,7 +19,7 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const redirectTo = location.state?.from?.pathname || '/generate';
+  const redirectTo = location.state?.from?.pathname || '/dashboard';
   const locationMessage = location.state?.message || '';
 
   // Already authenticated → redirect
@@ -59,24 +56,43 @@ const AuthPage = () => {
 
     setLoading(true);
     try {
-      const endpoint = isLogin ? `${API}/login` : `${API}/register`;
-      const payload = isLogin
-        ? { email: form.email, password: form.password }
-        : { name: form.name, email: form.email, password: form.password };
+      // Simulate a small delay for better UX
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-      const { data } = await axios.post(endpoint, payload);
+      if (isLogin) {
+        // Simple login simulation: check if user exists in localStorage
+        const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const user = users.find((u) => u.email === form.email && u.password === form.password);
 
-      authLogin(data.token, data.user);
-      setSuccess(isLogin ? `Welcome back, ${data.user.name}!` : `Account created! Welcome, ${data.user.name}!`);
+        if (!user) {
+          throw new Error('Invalid email or password.');
+        }
+
+        const userData = { name: user.name, email: user.email, isLoggedIn: true };
+        authLogin('local-token-' + Date.now(), userData);
+        setSuccess(`Welcome back, ${user.name}!`);
+      } else {
+        // Simple signup simulation: store user in localStorage
+        const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        if (users.some((u) => u.email === form.email)) {
+          throw new Error('Email already registered.');
+        }
+
+        const newUser = { name: form.name, email: form.email, password: form.password };
+        users.push(newUser);
+        localStorage.setItem('registeredUsers', JSON.stringify(users));
+
+        const userData = { name: newUser.name, email: newUser.email, isLoggedIn: true };
+        authLogin('local-token-' + Date.now(), userData);
+        setSuccess(`Account created! Welcome, ${newUser.name}!`);
+      }
 
       // Short delay to show success message, then redirect
-      setTimeout(() => navigate(redirectTo, { replace: true }), 800);
+      setTimeout(() => {
+        window.location.href = redirectTo;
+      }, 800);
     } catch (err) {
-      const msg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        'Something went wrong. Please try again.';
-      setError(msg);
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }

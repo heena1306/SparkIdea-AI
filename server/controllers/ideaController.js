@@ -1,184 +1,169 @@
-import OpenAI from 'openai';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import crypto from 'crypto';
 
-// ─── Fallback ideas (always safe, never empty) ───────────────────────────────
-const fallbackIdeas = [
-  {
-    id: "fb-01",
-    title: "AI Crop Monitoring Dashboard",
-    description: "A real-time platform that uses computer vision and AI to monitor crop health, detect diseases early, and deliver actionable insights to farmers via an intuitive dashboard.",
-    techStack: ["React", "Node.js", "TensorFlow", "MongoDB", "Python", "Chart.js"],
-    features: [
-      "Real-time crop health analysis via satellite imagery",
-      "AI-powered disease and pest early detection alerts",
-      "Weather data integration for predictive insights",
-      "Export reports to PDF with historical trend charts"
-    ],
-    difficulty: "Intermediate",
-    estimatedTime: "3 Weeks",
-    roadmap: [
-      { step: 1, title: "Project Setup & UI", desc: "Bootstrap the React frontend with dashboard layout, routing, and Tailwind CSS." },
-      { step: 2, title: "Backend API", desc: "Build Express endpoints for crop data ingestion and AI model invocation." },
-      { step: 3, title: "ML Integration", desc: "Integrate TensorFlow model for image classification and health scoring." },
-      { step: 4, title: "Data Viz & Deploy", desc: "Add Chart.js graphs, historical trends, and deploy to Vercel + Railway." }
-    ],
-    githubStructure: [
-      "client/src/components",
-      "client/src/pages/Dashboard",
-      "server/controllers",
-      "server/routes",
-      "ml/models",
-      "ml/training_data"
-    ]
-  },
-  {
-    id: "fb-02",
-    title: "Smart Resume Analyzer",
-    description: "An AI-powered SaaS tool that parses developer resumes, scores them against job descriptions using NLP, and provides actionable improvement suggestions to maximize interview callbacks.",
-    techStack: ["React", "Python", "FastAPI", "OpenAI", "PostgreSQL", "Docker"],
-    features: [
-      "Drag-and-drop PDF/DOCX resume upload",
-      "ATS compatibility scoring with keyword gap analysis",
-      "AI-generated tailored improvement suggestions per job role",
-      "Side-by-side comparison of resume vs job description"
-    ],
-    difficulty: "Beginner",
-    estimatedTime: "2 Weeks",
-    roadmap: [
-      { step: 1, title: "Frontend UI", desc: "Build the file upload interface, results dashboard, and score visualizations." },
-      { step: 2, title: "FastAPI Backend", desc: "Create endpoints for file parsing, text extraction, and scoring logic." },
-      { step: 3, title: "AI Integration", desc: "Connect to OpenAI API to generate contextual feedback and suggestions." },
-      { step: 4, title: "Polish & Ship", desc: "Add user auth, history tracking, and containerize with Docker." }
-    ],
-    githubStructure: [
-      "client/src/pages/Upload",
-      "client/src/components/ScoreCard",
-      "api/routers/resume.py",
-      "api/services/nlp_engine.py",
-      "docs/architecture"
-    ]
-  },
-  {
-    id: "fb-03",
-    title: "AI Developer Health Assistant",
-    description: "A conversational AI chatbot designed specifically for developers, providing ergonomic tips, burnout detection based on work patterns, and personalized wellness routines to boost productivity.",
-    techStack: ["React", "Node.js", "OpenAI GPT-4", "Socket.io", "Redis", "MongoDB"],
-    features: [
-      "Real-time AI chat with streaming responses via WebSocket",
-      "Work-pattern analysis with burnout risk scoring",
-      "Personalized break reminders and ergonomic exercises",
-      "Mood tracking journal with AI-powered weekly summaries"
-    ],
-    difficulty: "Advanced",
-    estimatedTime: "4 Weeks",
-    roadmap: [
-      { step: 1, title: "Chat UI", desc: "Build a polished real-time chat interface with message streaming and history." },
-      { step: 2, title: "WebSocket Layer", desc: "Implement Socket.io for bi-directional streaming AI responses." },
-      { step: 3, title: "AI & Context Memory", desc: "Integrate GPT-4 with Redis-backed conversation memory per user session." },
-      { step: 4, title: "Analytics & Auth", desc: "Add dashboard for pattern analysis, burnout scores, and secure user auth." }
-    ],
-    githubStructure: [
-      "client/src/components/Chat",
-      "client/src/pages/Wellness",
-      "server/sockets/chatHandler.js",
-      "server/services/ai/gpt.js",
-      "server/models/Session.js",
-      "server/utils/memory.js"
-    ]
-  }
-];
-
-// ─── Build the shared prompt ──────────────────────────────────────────────────
-const buildPrompt = (skills, interest, level) => `
-You are an elite Silicon Valley software architect. Generate exactly 3 distinct, creative, and professional SaaS/software project ideas.
-
-User Parameters:
-- Skills: ${skills && skills.length > 0 ? skills.join(', ') : 'General Programming'}
-- Interests: ${interest || 'Software Engineering'}
-- Difficulty Level: ${level || 'Intermediate'}
-
-OUTPUT FORMAT — respond with ONLY a valid JSON array, no markdown, no extra text:
-[
-  {
-    "id": "idea-01",
-    "title": "Catchy project name",
-    "description": "2-3 sentence description of what it does and why it is valuable.",
-    "techStack": ["Tech1", "Tech2", "Tech3", "Tech4", "Tech5"],
-    "features": ["Feature 1", "Feature 2", "Feature 3", "Feature 4"],
-    "difficulty": "Beginner | Intermediate | Advanced",
-    "estimatedTime": "e.g. 2 Weeks",
-    "roadmap": [
-      { "step": 1, "title": "Phase Name", "desc": "Phase description" },
-      { "step": 2, "title": "Phase Name", "desc": "Phase description" },
-      { "step": 3, "title": "Phase Name", "desc": "Phase description" }
-    ],
-    "githubStructure": ["folder/path1", "folder/path2", "folder/path3", "folder/path4", "folder/path5"]
-  }
-]
-`;
-
-// ─── Try Gemini ───────────────────────────────────────────────────────────────
-const tryGemini = async (skills, interest, level) => {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-  console.log('-> [Backend] Calling Gemini AI...');
-  const result = await model.generateContent(buildPrompt(skills, interest, level));
-  let rawText = result.response.text();
-
-  // Strip markdown code fences if present
-  rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-  return JSON.parse(rawText);
+// ─── Dynamic Idea Templates ───────────────────────────────
+const baseIdeas = {
+  beginner: [
+    {
+      title: "Task Tracker Dashboard",
+      description: "Modern task management app with drag-drop, priorities, and progress analytics.",
+      baseTech: ["React", "Tailwind CSS", "localStorage"],
+      features: ["Drag-drop reordering", "Categories", "Progress charts", "Export"],
+      estimatedTime: "1 Week",
+      roadmap: [
+        { step: 1, title: "UI Components", desc: "Build task list, form, drag-drop." },
+        { step: 2, title: "Persistence", desc: "localStorage + state management." },
+        { step: 3, title: "Polish", desc: "Animations, responsive, dark mode." }
+      ]
+    },
+    {
+      title: "Weather Forecast App",
+      description: "Real-time weather dashboard with forecasts and location alerts.",
+      baseTech: ["React", "OpenWeather API", "Chart.js"],
+      features: ["Live forecasts", "Alerts", "Maps", "Favorites"],
+      estimatedTime: "5 Days",
+      roadmap: [
+        { step: 1, title: "API Setup", desc: "Weather API integration." },
+        { step: 2, title: "UI Dashboard", desc: "Cards, charts, responsive." },
+        { step: 3, title: "Features", desc: "Search, notifications." }
+      ]
+    },
+    {
+      title: "URL Shortener SaaS",
+      description: "Custom branded link shortener with analytics and QR codes.",
+      baseTech: ["React", "Node.js", "MongoDB"],
+      features: ["Custom aliases", "Click analytics", "QR codes", "API"],
+      estimatedTime: "1 Week",
+      roadmap: [
+        { step: 1, title: "Backend API", desc: "Express endpoints for links." },
+        { step: 2, title: "Frontend", desc: "Dashboard, stats charts." },
+        { step: 3, title: "Advanced", desc: "QR, custom domains." }
+      ]
+    },
+    {
+      title: "Expense Tracker PWA",
+      description: "Progressive web app for tracking expenses with charts and budgets.",
+      baseTech: ["React", "Chart.js", "IndexedDB"],
+      features: ["Receipt scanner", "Budget alerts", "Reports", "PWA offline"],
+      estimatedTime: "1 Week",
+      roadmap: [
+        { step: 1, title: "Core Tracking", desc: "Add/edit expenses UI." },
+        { step: 2, title: "Charts Storage", desc: "IndexedDB + Chart.js." },
+        { step: 3, title: "PWA", desc: "Service worker, offline." }
+      ]
+    }
+  ],
+  intermediate: [
+    {
+      title: "AI Content Generator SaaS",
+      description: "Generate blog posts, social content, emails using smart templates.",
+      baseTech: ["React", "Tailwind", "local LLM"],
+      features: ["Multiple templates", "Tone control", "Export formats", "History"],
+      estimatedTime: "2 Weeks",
+      roadmap: [
+        { step: 1, title: "Templates Engine", desc: "Smart fill-in-the-blank generator." },
+        { step: 2, title: "UI Polish", desc: "Multi-step forms, previews." },
+        { step: 3, title: "Advanced", desc: "User auth, saved prompts." }
+      ]
+    },
+    {
+      title: "E-commerce Admin Dashboard",
+      description: "Complete admin panel for managing products, orders, customers.",
+      baseTech: ["React", "Chart.js", "Tailwind"],
+      features: ["Product CRUD", "Order tracking", "Analytics", "Inventory"],
+      estimatedTime: "3 Weeks",
+      roadmap: [
+        { step: 1, title: "Data Models", desc: "Products, orders schema." },
+        { step: 2, title: "Pages", desc: "Tables, forms, charts." },
+        { step: 3, title: "Polish", desc: "Responsive, search, filters." }
+      ]
+    },
+    {
+      title: "Freelance Marketplace Clone",
+      description: "Platform connecting freelancers with projects, payments, reviews.",
+      baseTech: ["React", "Node.js", "Stripe"],
+      features: ["Profiles", "Proposals", "Escrow payments", "Reviews"],
+      estimatedTime: "3 Weeks",
+      roadmap: [
+        { step: 1, title: "Auth Profiles", desc: "User signup, profiles." },
+        { step: 2, title: "Projects", desc: "Postings, proposals." },
+        { step: 3, title: "Payments", desc: "Stripe integration." }
+      ]
+    }
+  ],
+  advanced: [
+    {
+      title: "Real-time Collaboration Tool",
+      description: "Live document editor with cursors, chat, version history.",
+      baseTech: ["React", "Socket.io", "Node.js", "Yjs"],
+      features: ["Live editing", "Cursors", "Chat", "Versions"],
+      estimatedTime: "4 Weeks",
+      roadmap: [
+        { step: 1, title: "Socket Backend", desc: "Real-time sync server." },
+        { step: 2, title: "Editor UI", desc: "CodeMirror/Yjs integration." },
+        { step: 3, title: "Features", desc: "Chat, history, permissions." }
+      ]
+    },
+    {
+      title: "AI Video Generator SaaS",
+      description: "Text-to-video platform using AI models for marketing content.",
+      baseTech: ["React", "Node.js", "FFmpeg", "RunwayML"],
+      features: ["Text prompts", "Style templates", "Export 4K", "Queue system"],
+      estimatedTime: "5 Weeks",
+      roadmap: [
+        { step: 1, title: "AI Pipeline", desc: "Video gen backend." },
+        { step: 2, title: "Editor UI", desc: "Preview, timeline editor." },
+        { step: 3, title: "Scale", desc: "Queue, credits system." }
+      ]
+    }
+  ]
 };
 
-// ─── Try OpenAI ───────────────────────────────────────────────────────────────
-const tryOpenAI = async (skills, interest, level) => {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-  console.log('-> [Backend] Calling OpenAI...');
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: buildPrompt(skills, interest, level) }],
-    temperature: 0.7,
-  });
-
-  let rawText = completion.choices[0].message.content;
-  rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-  return JSON.parse(rawText);
+// ─── Mappers ───────────────────────────────
+const techMapper = {
+  react: ["React", "Tailwind", "Vite"],
+  node: ["Node.js", "Express", "MongoDB"],
+  python: ["Python", "FastAPI"],
+  ai: ["OpenAI", "LangChain"],
+  mobile: ["React Native", "Expo"]
 };
 
-// ─── Main Controller ──────────────────────────────────────────────────────────
+const domainEnhancers = {
+  saas: { descSuffix: 'as scalable SaaS platform', features: ["Stripe", "Auth0"] },
+  ai: { descSuffix: 'AI-powered solution', features: ["ML inference", "Fine-tuning"] },
+  fintech: { descSuffix: 'fintech application', features: ["Plaid", "KYC"] }
+};
+
+// ─── Generator ───────────────────────────────
+const generateDynamicIdeas = (skills = [], interest = 'web', level = 'intermediate') => {
+  const pool = baseIdeas[level] || baseIdeas.intermediate;
+  const selected = pool.sort(() => 0.5 - Math.random()).slice(0, 3);
+
+  return selected.map((base, i) => ({
+    id: crypto.randomUUID(),
+    title: base.title,
+    description: `${base.description}${domainEnhancers[interest.toLowerCase()]?.descSuffix ? ` ${domainEnhancers[interest.toLowerCase()].descSuffix}.` : ''}`,
+    techStack: [...base.baseTech, ...skills.flatMap(s => techMapper[s.toLowerCase()] || [])].slice(0, 6),
+    features: [...base.features, ...(domainEnhancers[interest.toLowerCase()]?.features || [])].slice(0, 6),
+    difficulty: level.charAt(0).toUpperCase() + level.slice(1),
+    estimatedTime: base.estimatedTime,
+    roadmap: base.roadmap,
+    githubStructure: [
+      "client/src/",
+      "server/",
+      "docs/",
+      "README.md"
+    ]
+  }));
+};
+
+// ─── Controller ───────────────────────────────
 export const generateIdea = async (req, res) => {
-  const { skills, interest, level } = req.body;
-
-  console.log('-> [Backend] Generation Request received:', { skills, interest, level });
-
-  const hasGemini = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 10;
-  const hasOpenAI = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 10;
-
-  // ── Try Gemini first ──
-  if (hasGemini) {
-    try {
-      const ideas = await tryGemini(skills, interest, level);
-      console.log('-> [Backend Success] Gemini returned', ideas.length, 'ideas. Sending to client.');
-      return res.status(200).json(ideas);
-    } catch (err) {
-      console.error('-> [Backend] Gemini failed:', err.message, '— trying next option...');
-    }
+  try {
+    const { skills = [], interest = 'web', level = 'intermediate' } = req.body;
+    const ideas = generateDynamicIdeas(skills, interest, level);
+    res.json(ideas);
+  } catch (error) {
+    res.status(500).json({ error: 'Generation failed' });
   }
-
-  // ── Try OpenAI next ──
-  if (hasOpenAI) {
-    try {
-      const ideas = await tryOpenAI(skills, interest, level);
-      console.log('-> [Backend Success] OpenAI returned', ideas.length, 'ideas. Sending to client.');
-      return res.status(200).json(ideas);
-    } catch (err) {
-      console.error('-> [Backend] OpenAI failed:', err.message, '— falling back to static ideas.');
-    }
-  }
-
-  // ── Always-safe fallback ──
-  console.warn('-> [Backend] No AI available or all AI calls failed. Returning static fallback ideas.');
-  return res.status(200).json(fallbackIdeas);
 };
+

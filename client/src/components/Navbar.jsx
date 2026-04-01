@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Sparkles, Grid, LogOut } from 'lucide-react';
+import { Sparkles, Grid, LogOut, Layout } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,7 +15,7 @@ const Navbar = () => {
   };
 
   // First letter of user's name for avatar
-  const initial = user?.name ? user.name.charAt(0).toUpperCase() : '?';
+  const initial = user?.name ? user.name.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : '?');
 
   return (
     <motion.nav
@@ -34,40 +34,55 @@ const Navbar = () => {
           <span className="text-xl font-black text-charcoal tracking-tighter hidden sm:block">SparkIdea</span>
         </Link>
 
-        {/* Center nav pills */}
-        <div className="flex items-center gap-1.5 bg-slate-50/80 p-1.5 rounded-[1.5rem] border border-slate-200/50 backdrop-blur-3xl shadow-sm">
-          <Link
-            to="/generate"
-            className={`px-5 py-2 rounded-full text-sm font-bold transition-all tracking-wide ${
-              location.pathname === '/generate'
-                ? 'bg-white text-primary shadow-sm border border-slate-100'
-                : 'text-slate-500 hover:text-primary hover:bg-white/60'
-            }`}
-          >
-            Generator
-          </Link>
-          <Link
-            to="/saved"
-            className={`px-5 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 transition-all tracking-wide ${
-              location.pathname === '/saved'
-                ? 'bg-white text-primary shadow-sm border border-slate-100'
-                : 'text-slate-500 hover:text-primary hover:bg-white/60'
-            }`}
-          >
-            <Grid className="w-3.5 h-3.5 dual-tone-icon" /> Library
-          </Link>
-        </div>
+        {/* Center nav pills - Only show if logged in */}
+        {isAuthenticated && (
+          <div className="hidden md:flex items-center gap-1.5 bg-slate-50/80 p-1.5 rounded-[1.5rem] border border-slate-200/50 backdrop-blur-3xl shadow-sm">
+            <Link
+              to="/dashboard"
+              className={`px-5 py-2 rounded-full text-sm font-bold transition-all tracking-wide flex items-center gap-2 ${
+                location.pathname === '/dashboard'
+                  ? 'bg-white text-primary shadow-sm border border-slate-100'
+                  : 'text-slate-500 hover:text-primary hover:bg-white/60'
+              }`}
+            >
+              <Layout className="w-4 h-4" /> Dashboard
+            </Link>
+            <Link
+              to="/generate"
+              className={`px-5 py-2 rounded-full text-sm font-bold transition-all tracking-wide flex items-center gap-2 ${
+                location.pathname === '/generate'
+                  ? 'bg-white text-primary shadow-sm border border-slate-100'
+                  : 'text-slate-500 hover:text-primary hover:bg-white/60'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" /> Generator
+            </Link>
+            <Link
+              to="/saved"
+              className={`px-5 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all tracking-wide ${
+                location.pathname === '/saved'
+                  ? 'bg-white text-primary shadow-sm border border-slate-100'
+                  : 'text-slate-500 hover:text-primary hover:bg-white/60'
+              }`}
+            >
+              <Grid className="w-4 h-4" /> Library
+            </Link>
+          </div>
+        )}
 
         {/* Right: auth actions */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          {isAuthenticated && user ? (
+          {isAuthenticated ? (
             <>
               {/* User avatar + name */}
-              <div className="hidden sm:flex items-center gap-2.5">
+              <div className="hidden sm:flex items-center gap-2.5 mr-2">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-secondary to-primary flex items-center justify-center text-white font-black text-sm shadow-sm border border-white/40 flex-shrink-0">
                   {initial}
                 </div>
-                <span className="text-sm font-bold text-charcoal max-w-[120px] truncate">{user.name}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-charcoal max-w-[120px] truncate leading-none mb-0.5">{user.name || 'Developer'}</span>
+                  <span className="text-[10px] font-medium text-slate-400 truncate leading-none">{user.email}</span>
+                </div>
               </div>
 
               {/* Logout button */}
@@ -85,7 +100,7 @@ const Navbar = () => {
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
               <Link
                 to="/auth"
-                className="px-6 py-2.5 rounded-full bg-white border border-slate-200 text-charcoal font-bold hover:border-primary/50 hover:text-primary transition-all text-sm tracking-wide shadow-sm hover:shadow-md"
+                className="px-8 py-2.5 rounded-full bg-slate-900 text-white font-bold hover:bg-charcoal transition-all text-sm tracking-wide shadow-lg hover:shadow-xl"
               >
                 Login
               </Link>
