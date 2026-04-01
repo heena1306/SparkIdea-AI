@@ -214,8 +214,9 @@ const GeneratorPage = () => {
            )}
            {ideas.length > 0 && !isLoading && (
              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { staggerChildren: 0.1 } }}
+                initial="hidden"
+                animate="visible"
+                variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.15 } } }}
                 className="grid grid-cols-1 xl:grid-cols-3 gap-8"
              >
                 {ideas.map((idea, index) => (

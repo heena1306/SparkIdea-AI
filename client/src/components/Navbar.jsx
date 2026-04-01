@@ -1,46 +1,100 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Grid } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Sparkles, Grid, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
+
+  // First letter of user's name for avatar
+  const initial = user?.name ? user.name.charAt(0).toUpperCase() : '?';
 
   return (
-    <motion.nav 
+    <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 80, damping: 20 }}
-      className="fixed top-0 w-full z-50 glass-card bg-white/70 backdrop-blur-xl border-b border-white/40 !rounded-none !border-x-0 !border-t-0 shadow-[0_4px_30px_rgba(0,0,0,0.02)] px-8 py-5"
+      transition={{ type: 'spring', stiffness: 80, damping: 20 }}
+      className="fixed top-0 w-full z-50 glass-card bg-white/70 backdrop-blur-xl border-b border-white/40 !rounded-none !border-x-0 !border-t-0 shadow-[0_4px_30px_rgba(0,0,0,0.02)] px-6 sm:px-8 py-4"
     >
       <div className="max-w-[90rem] mx-auto flex justify-between items-center">
-        
-        <Link to="/" className="flex items-center gap-4 group">
-          <div className="w-12 h-12 rounded-[1rem] bg-gradient-to-tr from-secondary to-primary flex items-center justify-center shadow-md border border-white/60 group-hover:scale-105 transition-transform">
-            <Sparkles className="w-6 h-6 text-white animate-pulse" />
+
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
+          <div className="w-11 h-11 rounded-[1rem] bg-gradient-to-tr from-secondary to-primary flex items-center justify-center shadow-md border border-white/60 group-hover:scale-105 transition-transform">
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <span className="text-2xl font-black text-[#0F172A] tracking-tighter hidden sm:block">SparkIdea</span>
+          <span className="text-xl font-black text-charcoal tracking-tighter hidden sm:block">SparkIdea</span>
         </Link>
 
-        {/* Floating Menu Block */}
-        <div className="flex items-center gap-2 bg-slate-50/80 p-2 rounded-[1.5rem] border border-slate-200/50 backdrop-blur-3xl shadow-sm">
-          <Link to="/generate" className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all tracking-wide ${location.pathname === '/generate' ? 'bg-white text-primary shadow-sm border border-slate-100' : 'text-slate-500 hover:text-primary hover:bg-slate-100'}`}>
+        {/* Center nav pills */}
+        <div className="flex items-center gap-1.5 bg-slate-50/80 p-1.5 rounded-[1.5rem] border border-slate-200/50 backdrop-blur-3xl shadow-sm">
+          <Link
+            to="/generate"
+            className={`px-5 py-2 rounded-full text-sm font-bold transition-all tracking-wide ${
+              location.pathname === '/generate'
+                ? 'bg-white text-primary shadow-sm border border-slate-100'
+                : 'text-slate-500 hover:text-primary hover:bg-white/60'
+            }`}
+          >
             Generator
           </Link>
-          <Link to="/saved" className={`px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all tracking-wide group ${location.pathname === '/saved' ? 'bg-white text-primary shadow-sm border border-slate-100' : 'text-slate-500 hover:text-primary hover:bg-slate-100'}`}>
-            <Grid className={`w-4 h-4 dual-tone-icon`} /> Library
+          <Link
+            to="/saved"
+            className={`px-5 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 transition-all tracking-wide ${
+              location.pathname === '/saved'
+                ? 'bg-white text-primary shadow-sm border border-slate-100'
+                : 'text-slate-500 hover:text-primary hover:bg-white/60'
+            }`}
+          >
+            <Grid className="w-3.5 h-3.5 dual-tone-icon" /> Library
           </Link>
         </div>
 
-        <div className="flex items-center gap-4">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link to="/auth" className="px-8 py-3.5 rounded-full bg-white border border-slate-200 text-[#0F172A] font-bold hover:border-primary/50 hover:text-primary transition-all text-sm tracking-widest shadow-sm hover:shadow-md">
-              LOGIN
-            </Link>
-          </motion.div>
+        {/* Right: auth actions */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {isAuthenticated && user ? (
+            <>
+              {/* User avatar + name */}
+              <div className="hidden sm:flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-secondary to-primary flex items-center justify-center text-white font-black text-sm shadow-sm border border-white/40 flex-shrink-0">
+                  {initial}
+                </div>
+                <span className="text-sm font-bold text-charcoal max-w-[120px] truncate">{user.name}</span>
+              </div>
+
+              {/* Logout button */}
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:border-red-200 hover:text-red-500 transition-all shadow-sm hover:shadow-md"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:block">Logout</span>
+              </motion.button>
+            </>
+          ) : (
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+              <Link
+                to="/auth"
+                className="px-6 py-2.5 rounded-full bg-white border border-slate-200 text-charcoal font-bold hover:border-primary/50 hover:text-primary transition-all text-sm tracking-wide shadow-sm hover:shadow-md"
+              >
+                Login
+              </Link>
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.nav>
   );
 };
+
 export default Navbar;
