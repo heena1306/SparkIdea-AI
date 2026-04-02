@@ -1,18 +1,59 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Terminal, BookOpen, Layers, ArrowUp, Search, X } from 'lucide-react';
+import { Sparkles, Terminal, BookOpen, Layers, ArrowUp, Search, X, TrendingUp, Zap, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import IdeaCard from '../components/IdeaCard';
 
 const SKILLS_SUGGESTIONS = [
   'React', 'Node.js', 'Python', 'AI', 'Machine Learning', 
   'Web Dev', 'Mobile Dev', 'AWS', 'Firebase', 'TypeScript',
-  'Next.js', 'Tailwind CSS', 'MongoDB', 'PostgreSQL', 'Docker'
+  'Next.js', 'Tailwind CSS', 'MongoDB', 'PostgreSQL', 'Docker',
+  'PyTorch', 'TensorFlow', 'OpenAI', 'LangChain', 'Vector DBs'
 ];
 
 const INTERESTS_SUGGESTIONS = [
   'Fintech', 'Healthtech', 'E-commerce', 'Crypto', 'Gaming',
   'Education', 'Social Media', 'Productivity', 'Sustainability',
-  'Cybersecurity', 'Automation', 'Real Estate', 'Travel', 'Music'
+  'Cybersecurity', 'Automation', 'Real Estate', 'Travel', 'Music',
+  'Generative AI', 'SaaS', 'DevOps', 'IoT', 'Data Science'
+];
+
+const TRENDING_IDEAS = [
+  {
+    title: "AI Code Reviewer for PRs",
+    description: "An automated tool that uses LLMs to review pull requests, suggest optimizations, and catch security vulnerabilities before merge.",
+    techStack: ["Node.js", "OpenAI", "GitHub API", "TypeScript"],
+    features: ["Automated PR comments", "Security scanning", "Performance suggestions", "Style enforcement"],
+    difficulty: "Intermediate",
+    estimatedTime: "3-4 weeks",
+    isTrending: true,
+    rating: 9.2,
+    isUnique: true,
+    recommendation: "High demand in DevOps and large engineering teams."
+  },
+  {
+    title: "Smart Health Diagnostic Bot",
+    description: "A HIPAA-compliant chatbot that helps users understand symptoms and suggests when to see a doctor using medical knowledge graphs.",
+    techStack: ["Python", "FastAPI", "React", "Vector DB"],
+    features: ["Symptom analysis", "Medical history tracking", "Doctor appointment linking", "Encrypted data storage"],
+    difficulty: "Advanced",
+    estimatedTime: "2-3 months",
+    isTrending: true,
+    rating: 8.8,
+    isUnique: true,
+    recommendation: "Perfect for exploring AI in healthcare regulations."
+  },
+  {
+    title: "Personalized AI Learning Path",
+    description: "An educational platform that generates custom learning roadmaps based on a user's current skills and desired career goals.",
+    techStack: ["Next.js", "LangChain", "PostgreSQL", "Tailwind"],
+    features: ["Skill assessment quiz", "Dynamic roadmap generation", "Resource aggregation", "Progress tracking"],
+    difficulty: "Intermediate",
+    estimatedTime: "4-5 weeks",
+    isTrending: true,
+    rating: 9.5,
+    isUnique: false,
+    recommendation: "Taps into the massive EdTech boom and personalized learning trends."
+  }
 ];
 
 const GeneratorPage = () => {
@@ -29,9 +70,29 @@ const GeneratorPage = () => {
   
   const [showSkillsSuggestions, setShowSkillsSuggestions] = useState(false);
   const [showInterestsSuggestions, setShowInterestsSuggestions] = useState(false);
+  const [filteredSkills, setFilteredSkills] = useState(SKILLS_SUGGESTIONS);
+  const [filteredInterests, setFilteredInterests] = useState(INTERESTS_SUGGESTIONS);
   
   const skillsRef = useRef(null);
   const interestsRef = useRef(null);
+
+  useEffect(() => {
+    const currentSkill = formData.skills.split(',').pop()?.trim().toLowerCase() || '';
+    if (currentSkill) {
+      setFilteredSkills(SKILLS_SUGGESTIONS.filter(s => s.toLowerCase().includes(currentSkill)));
+    } else {
+      setFilteredSkills(SKILLS_SUGGESTIONS);
+    }
+  }, [formData.skills]);
+
+  useEffect(() => {
+    const currentInterest = formData.interest.toLowerCase();
+    if (currentInterest) {
+      setFilteredInterests(INTERESTS_SUGGESTIONS.filter(i => i.toLowerCase().includes(currentInterest)));
+    } else {
+      setFilteredInterests(INTERESTS_SUGGESTIONS);
+    }
+  }, [formData.interest]);
 
   const generateSmartIdeas = (skills, interest, level) => {
     // This is a mock AI generation logic
@@ -175,7 +236,7 @@ const GeneratorPage = () => {
                     exit={{ opacity: 0, y: 10 }}
                     className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 p-2 grid grid-cols-2 sm:grid-cols-3 gap-1"
                   >
-                    {SKILLS_SUGGESTIONS.map(skill => (
+                    {filteredSkills.length > 0 ? filteredSkills.map(skill => (
                       <button
                         key={skill}
                         type="button"
@@ -184,7 +245,9 @@ const GeneratorPage = () => {
                       >
                         {skill}
                       </button>
-                    ))}
+                    )) : (
+                      <div className="col-span-full py-2 px-3 text-xs text-slate-400 font-bold italic">No matching skills found</div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -214,7 +277,7 @@ const GeneratorPage = () => {
                     exit={{ opacity: 0, y: 10 }}
                     className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 p-2 grid grid-cols-2 sm:grid-cols-3 gap-1"
                   >
-                    {INTERESTS_SUGGESTIONS.map(interest => (
+                    {filteredInterests.length > 0 ? filteredInterests.map(interest => (
                       <button
                         key={interest}
                         type="button"
@@ -223,7 +286,9 @@ const GeneratorPage = () => {
                       >
                         {interest}
                       </button>
-                    ))}
+                    )) : (
+                      <div className="col-span-full py-2 px-3 text-xs text-slate-400 font-bold italic">No matching interests found</div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -283,10 +348,30 @@ const GeneratorPage = () => {
            )}
 
            {ideas.length === 0 && !isLoading && !error && (
-             <div className="text-center py-20 opacity-20">
-               <Sparkles className="w-20 h-20 mx-auto mb-4" />
-               <p className="text-2xl font-black">Ready to spark an idea?</p>
-             </div>
+             <motion.div 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="space-y-10"
+             >
+               <div className="flex flex-col items-center text-center space-y-2">
+                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-100 text-amber-600 text-[10px] font-black uppercase tracking-widest shadow-sm">
+                   <TrendingUp className="w-3 h-3" /> Trending Now
+                 </div>
+                 <h2 className="text-3xl font-[900] text-slate-900 tracking-tight">Explore Popular AI Concepts</h2>
+                 <p className="text-slate-500 font-medium max-w-lg">Get inspired by what's hot in the industry right now. These ideas are hand-picked for modern developers.</p>
+               </div>
+
+               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                 {TRENDING_IDEAS.map((idea, index) => (
+                   <IdeaCard key={`trending-${index}`} idea={{...idea, id: `Trend ${index + 1}`}} />
+                 ))}
+               </div>
+
+               <div className="text-center pt-8 opacity-20">
+                 <Sparkles className="w-12 h-12 mx-auto mb-4" />
+                 <p className="text-xl font-black">Or generate something unique above</p>
+               </div>
+             </motion.div>
            )}
         </div>
       </AnimatePresence>

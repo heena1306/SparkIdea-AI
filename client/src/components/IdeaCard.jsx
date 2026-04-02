@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Layers, Box, Check, Clock, Activity, ChevronDown, ChevronUp, Save, FileCode2, Copy, X, Download, ArrowRight } from 'lucide-react';
+import { Layers, Box, Check, Clock, Activity, ChevronDown, ChevronUp, Save, FileCode2, Copy, X, Download, ArrowRight, Star, ShieldCheck, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const cardVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 30 },
@@ -18,12 +19,12 @@ const IdeaCard = ({ idea }) => {
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
   const [showReadme, setShowReadme] = useState(false);
   const navigate = useNavigate();
+  const { user, refreshSavedCount } = useAuth();
 
   // Initialise from localStorage so button reflects persisted state on re-render
   const [isSaved, setIsSaved] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-      const user = JSON.parse(localStorage.getItem('authUser') || 'null');
       return saved.some(i => i.title === idea?.title && (user ? i.userEmail === user.email : true));
     } catch {
       return false;
@@ -32,27 +33,28 @@ const IdeaCard = ({ idea }) => {
 
   if (!idea) return null;
 
+  // Mock data for enhancement if not present
+  const rating = idea.rating || Math.floor(Math.random() * 3) + 7.5; // 7.5 - 10.0
+  const isUnique = idea.isUnique !== undefined ? idea.isUnique : Math.random() > 0.4;
+  const recommendation = idea.recommendation || (isUnique ? "This aligns with your interest in cutting-edge AI." : "Great for building a solid portfolio in common AI patterns.");
+
   const handleSave = () => {
     try {
       let saved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-      const user = JSON.parse(localStorage.getItem('authUser') || 'null');
       
       // Prevent duplicates — check by title and userEmail
       if (!saved.find(i => i.title === idea.title && (user ? i.userEmail === user.email : true))) {
         const ideaToSave = {
-          title: idea.title,
-          description: idea.description,
-          techStack: idea.techStack,
-          features: idea.features,
-          difficulty: idea.difficulty,
-          estimatedTime: idea.estimatedTime,
-          roadmap: idea.roadmap,
-          githubStructure: idea.githubStructure,
+          ...idea,
+          rating,
+          isUnique,
+          recommendation,
           userEmail: user?.email || null,
           savedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         };
         saved.push(ideaToSave);
         localStorage.setItem('savedIdeas', JSON.stringify(saved));
+        refreshSavedCount();
       }
       setIsSaved(true);
     } catch (err) {
@@ -135,8 +137,16 @@ ${idea.roadmap ? idea.roadmap.map(r => `### Step ${r.step}: ${r.title}\n${r.desc
           {/* Header */}
           <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 mb-6">
             <div className="flex flex-wrap gap-2 items-center justify-between w-full">
-              <div className="text-primary text-[10px] sm:text-xs font-bold tracking-[0.2em] uppercase flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded w-max border border-blue-100 shadow-sm">
-                <SparkleIcon /> {idea.id || 'Idea'}
+              <div className="flex gap-2">
+                <div className="text-primary text-[10px] sm:text-xs font-bold tracking-[0.2em] uppercase flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded w-max border border-blue-100 shadow-sm">
+                  <SparkleIcon /> {idea.id || 'Idea'}
+                </div>
+                <div className={`text-[10px] sm:text-xs font-bold tracking-[0.1em] uppercase flex items-center gap-2 px-3 py-1.5 rounded w-max border shadow-sm ${isUnique ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                  {isUnique ? <Zap className="w-3 h-3 fill-purple-500" /> : <Layers className="w-3 h-3" />} {isUnique ? 'Unique' : 'Common'}
+                </div>
+                <div className="text-amber-600 text-[10px] sm:text-xs font-bold tracking-[0.1em] uppercase flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded w-max border border-amber-100 shadow-sm">
+                  <Star className="w-3 h-3 fill-amber-500" /> {rating.toFixed(1)}/10
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -197,9 +207,18 @@ ${idea.roadmap ? idea.roadmap.map(r => `### Step ${r.step}: ${r.title}\n${r.desc
             </div>
           </div>
 
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium mb-8">
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium mb-6">
             {idea.description}
           </p>
+
+          {/* Recommendation */}
+          <div className="mb-6 p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm text-slate-600 font-bold leading-relaxed">
+              <span className="text-blue-600 uppercase tracking-wider text-[10px] block mb-1">Recommendation</span>
+              {recommendation}
+            </p>
+          </div>
 
           {/* Tech Stack Tags */}
           <div className="flex flex-wrap gap-2 mb-8">

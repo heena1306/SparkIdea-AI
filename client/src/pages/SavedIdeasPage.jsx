@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, Trash2, Clock, Activity, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bookmark, Trash2, Clock, Activity, Check, ChevronDown, ChevronUp, Star, Zap, ShieldCheck, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const pageVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -21,6 +22,11 @@ const itemVariants = {
 const SavedCard = ({ idea, onRemove }) => {
   const [roadmapOpen, setRoadmapOpen] = useState(false);
 
+  // Use saved data or fallback to defaults
+  const rating = idea.rating || 8.5;
+  const isUnique = idea.isUnique !== undefined ? idea.isUnique : true;
+  const recommendation = idea.recommendation || "Aligns with your AI development goals.";
+
   return (
     <motion.div
       variants={itemVariants}
@@ -33,17 +39,20 @@ const SavedCard = ({ idea, onRemove }) => {
       className="glass-card bg-white/80 p-7 border border-slate-200 hover:border-primary/40 group shadow-sm hover:shadow-xl transition-colors duration-300 flex flex-col h-full"
     >
       {/* Top row: date badge + difficulty */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="text-xs font-bold tracking-[0.15em] text-primary uppercase bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
-          {idea.savedAt || idea.estimatedTime || 'Saved'}
+      <div className="flex flex-col gap-3 mb-5">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-bold tracking-[0.15em] text-primary uppercase bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
+            {idea.savedAt || idea.estimatedTime || 'Saved'}
+          </div>
+          <div className="flex gap-2">
+            <div className={`text-[10px] font-black tracking-wider px-2 py-1 rounded-full uppercase border ${isUnique ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+              {isUnique ? 'Unique' : 'Common'}
+            </div>
+            <div className="text-amber-600 text-[10px] font-black tracking-wider px-2 py-1 rounded-full uppercase border border-amber-100 bg-amber-50">
+              <Star className="w-2.5 h-2.5 inline mr-1 fill-amber-500" /> {rating.toFixed(1)}
+            </div>
+          </div>
         </div>
-        <span className={`text-[10px] font-black tracking-wider px-2.5 py-1 rounded-full uppercase border ${
-          idea.difficulty === 'Advanced' ? 'bg-red-50 text-red-600 border-red-200'
-          : idea.difficulty === 'Intermediate' ? 'bg-orange-50 text-orange-600 border-orange-200'
-          : 'bg-green-50 text-green-600 border-green-200'
-        }`}>
-          {idea.difficulty || 'Intermediate'}
-        </span>
       </div>
 
       {/* Title */}
@@ -52,7 +61,15 @@ const SavedCard = ({ idea, onRemove }) => {
       </h3>
 
       {/* Description */}
-      <p className="text-slate-500 font-medium mb-5 text-sm leading-relaxed flex-grow">{idea.description}</p>
+      <p className="text-slate-500 font-medium mb-5 text-sm leading-relaxed">{idea.description}</p>
+
+      {/* Recommendation */}
+      <div className="mb-5 p-3 rounded-xl bg-blue-50/50 border border-blue-100 flex items-start gap-2">
+        <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-slate-600 font-bold leading-relaxed">
+          {recommendation}
+        </p>
+      </div>
 
       {/* Meta badges */}
       <div className="flex items-center gap-2 mb-5">
@@ -153,6 +170,7 @@ const SavedCard = ({ idea, onRemove }) => {
 
 const SavedIdeasPage = () => {
   const [savedIdeas, setSavedIdeas] = useState([]);
+  const { refreshSavedCount } = useAuth();
 
   useEffect(() => {
     try {
@@ -177,6 +195,7 @@ const SavedIdeasPage = () => {
     const allSaved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
     const filtered = allSaved.filter(idea => !(idea.title === title && (user ? idea.userEmail === user.email : true)));
     localStorage.setItem('savedIdeas', JSON.stringify(filtered));
+    refreshSavedCount();
     
     // Update local state to reflect removal
     setSavedIdeas(savedIdeas.filter(idea => idea.title !== title));

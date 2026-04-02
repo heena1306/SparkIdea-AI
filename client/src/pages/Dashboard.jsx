@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   TrendingUp, 
   Save, 
@@ -11,23 +11,28 @@ import {
   Layout,
   Zap,
   Star,
-  Plus
+  Plus,
+  X,
+  CheckCircle2,
+  Circle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import IdeaCard from '../components/IdeaCard';
 
 const Dashboard = () => {
-  const { user, isAuthenticated, generatedCount } = useAuth();
+  const { user, isAuthenticated, generatedCount, savedCount, refreshSavedCount, ideaStats, updateIdeaStats } = useAuth();
   const [stats, setStats] = useState({ generated: 0, saved: 0, active: 0 });
   const [savedIdeas, setSavedIdeas] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
+      refreshSavedCount();
       const saved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-      const active = parseInt(localStorage.getItem('activeProjects') || '0');
+      const active = ideaStats.started || 0;
       
-      // Get last generated idea from localStorage (we'll need to store this in GeneratorPage)
+      // Get last generated idea from localStorage
       const lastGenerated = JSON.parse(localStorage.getItem('lastGeneratedIdea') || 'null');
       const lastSaved = saved.length > 0 ? saved[saved.length - 1] : null;
 
@@ -38,14 +43,19 @@ const Dashboard = () => {
       setSavedIdeas(saved);
       setStats({
         generated: generatedCount || 0,
-        saved: saved.length,
-        active
+        saved: savedCount,
+        active: active
       });
       setRecentActivity(activity);
     }
-  }, [isAuthenticated, generatedCount]);
+  }, [isAuthenticated, generatedCount, savedCount, ideaStats, savedIdeas.length]);
 
   if (!isAuthenticated) return null;
+
+  const handleCategoryUpdate = (category) => {
+    updateIdeaStats(category);
+    setShowCategoryModal(false);
+  };
 
   const avatarInitial = user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || '?';
 
@@ -57,22 +67,22 @@ const Dashboard = () => {
         <motion.section 
           initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-8 sm:p-12 text-white shadow-2xl"
+          className="relative overflow-hidden rounded-3xl bg-white p-8 sm:p-12 text-slate-900 shadow-xl border border-slate-100"
         >
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
               <span className="text-4xl font-black text-white">{avatarInitial}</span>
             </div>
             <div className="text-center md:text-left">
               <h1 className="text-4xl sm:text-5xl font-[900] tracking-tight mb-2">
-                Welcome, <span className="text-primary-light text-blue-400">{user?.name || 'Developer'}</span>
+                Welcome, <span className="text-blue-600">{user?.name || 'Developer'}</span>
               </h1>
-              <p className="text-slate-400 text-lg font-medium">{user?.email}</p>
+              <p className="text-slate-500 text-lg font-medium">{user?.email}</p>
             </div>
           </div>
           {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -ml-32 -mb-32" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-32 -mt-32" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -ml-32 -mb-32" />
         </motion.section>
 
         {/* Stats Cards */}
@@ -81,13 +91,29 @@ const Dashboard = () => {
             initial={{ y: 20, opacity: 0 }} 
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="glass-card p-8 flex flex-col items-center text-center group hover:border-primary/30 transition-all duration-300"
+            onClick={() => setShowCategoryModal(true)}
+            className="glass-card p-8 flex flex-col items-center text-center group hover:border-primary/30 transition-all duration-300 cursor-pointer"
           >
             <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Zap className="w-7 h-7" />
             </div>
             <h3 className="text-4xl font-black text-slate-900 mb-1">{stats.generated}</h3>
-            <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Total Ideas Generated</p>
+            <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-4">Total Ideas Generated</p>
+            
+            <div className="grid grid-cols-3 gap-2 w-full pt-4 border-t border-slate-100">
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-black text-emerald-500">{ideaStats.completed || 0}</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase">Done</span>
+              </div>
+              <div className="flex flex-col items-center border-x border-slate-100 px-2">
+                <span className="text-xs font-black text-blue-500">{ideaStats.started || 0}</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase">In Progress</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-black text-amber-500">{ideaStats.pending || 0}</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase">Queue</span>
+              </div>
+            </div>
           </motion.div>
 
           <motion.div 
@@ -210,6 +236,79 @@ const Dashboard = () => {
           </Link>
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {showCategoryModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCategoryModal(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl border border-slate-100"
+            >
+              <button 
+                onClick={() => setShowCategoryModal(false)}
+                className="absolute top-6 right-6 p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="mb-8">
+                <h2 className="text-2xl font-black text-slate-900 mb-2">Track Your Progress</h2>
+                <p className="text-slate-500 font-medium">Categorize your generated ideas to keep track of your journey.</p>
+              </div>
+
+              <div className="space-y-4">
+                <button 
+                  onClick={() => handleCategoryUpdate('started')}
+                  className="w-full flex items-center gap-4 p-5 rounded-2xl bg-blue-50 border-2 border-transparent hover:border-blue-200 transition-all group"
+                >
+                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="w-6 h-6" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-bold text-slate-900">Started</h3>
+                    <p className="text-xs text-slate-500 font-medium">Ideas you're currently building</p>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => handleCategoryUpdate('pending')}
+                  className="w-full flex items-center gap-4 p-5 rounded-2xl bg-amber-50 border-2 border-transparent hover:border-amber-200 transition-all group"
+                >
+                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
+                    <Circle className="w-6 h-6" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-bold text-slate-900">Pending</h3>
+                    <p className="text-xs text-slate-500 font-medium">Saved for future development</p>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => handleCategoryUpdate('completed')}
+                  className="w-full flex items-center gap-4 p-5 rounded-2xl bg-emerald-50 border-2 border-transparent hover:border-emerald-200 transition-all group"
+                >
+                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-bold text-slate-900">Completed</h3>
+                    <p className="text-xs text-slate-500 font-medium">Success stories and finished MVPs</p>
+                  </div>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
