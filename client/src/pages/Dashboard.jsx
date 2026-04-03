@@ -60,13 +60,13 @@ const Dashboard = () => {
       count: savedCount
     },
     {
-      id: 'pipeline',
-      title: 'Pipeline Overview',
+      id: 'trending',
+      title: 'Trending Skills',
       value: `${analytics.mostUsedSkill || 'React'}`,
-      subtext: `${ideaStats.pending} pending • Focus: ${analytics.dominantCategory || 'Web'}`,
-      icon: Brain,
-      color: 'text-purple-500',
-      bg: 'bg-purple-50',
+      subtext: 'Your top used technologies',
+      icon: TrendingUp,
+      color: 'text-orange-500',
+      bg: 'bg-orange-50',
       count: ideaStats.started
     }
   ];
@@ -88,32 +88,27 @@ const Dashboard = () => {
           animate={{ opacity: 1, y: 0 }} 
           className="relative overflow-hidden rounded-3xl bg-white p-8 sm:p-12 text-slate-900 shadow-xl border border-slate-100"
         >
-          <motion.div 
-            initial={{ scale: 0.95 }} 
-            animate={{ scale: 1 }} 
-            transition={{ delay: 0.3 }} 
-            className="mx-auto max-w-md text-center"
-          >
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 mb-8">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+              <span className="text-3xl font-black text-white">{avatarInitial}</span>
+            </div>
+            <div className="text-center md:text-left">
+              <h1 className="text-2xl sm:text-3xl font-[900] tracking-tight mb-2">
+                Welcome back, <span className="text-blue-600">{user?.name || 'Developer'}</span>
+              </h1>
+              <p className="text-slate-500 text-base font-medium">{user?.email}</p>
+              <p className="text-slate-400 text-lg mt-1 font-medium">Turn your ideas into impactful real-world solutions 🚀</p>
+            </div>
+          </div>
+          <div className="text-center">
             <Link 
               to="/generate" 
-              className="glow-button w-full px-12 py-6 text-xl font-black rounded-3xl flex items-center justify-center gap-4 shadow-2xl hover:shadow-[0_25px_50px_-12px_rgba(59,130,246,0.25)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 mx-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
+              className="glow-button inline-flex px-12 py-6 text-xl font-black rounded-3xl items-center gap-4 shadow-2xl hover:shadow-[0_25px_50px_-12px_rgba(59,130,246,0.25)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
             >
               <Plus className="w-8 h-8" />
               + Generate New Idea
               <Sparkles className="w-7 h-7 group-hover:rotate-180 transition-transform duration-700" />
             </Link>
-          </motion.div>
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
-              <span className="text-4xl font-black text-white">{avatarInitial}</span>
-            </div>
-            <div className="text-center md:text-left">
-              <h1 className="text-4xl sm:text-5xl font-[900] tracking-tight mb-2">
-                Welcome, <span className="text-blue-600">{user?.name || 'Developer'}</span>
-              </h1>
-              <p className="text-slate-500 text-lg font-medium">{user?.email}</p>
-              <p className="text-slate-400 text-xl mt-1 font-medium">Turn your ideas into impactful real-world solutions 🚀</p>
-            </div>
           </div>
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-32 -mt-32" />
@@ -192,7 +187,11 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {savedIdeas?.length > 0 ? (
                 savedIdeas
-                  .sort((a, b) => (userSkills?.some(skill => b.tags?.some(tag => tag.toLowerCase().includes(skill.toLowerCase())) ? 1 : 0) - (userSkills?.some(skill => a.tags?.some(tag => tag.toLowerCase().includes(skill.toLowerCase())) ? 1 : 0)))
+                  .sort((a, b) => {
+                    const bMatch = userSkills?.some(skill => b.tags?.some(tag => tag.toLowerCase().includes(skill.toLowerCase()))) ? 1 : 0;
+                    const aMatch = userSkills?.some(skill => a.tags?.some(tag => tag.toLowerCase().includes(skill.toLowerCase()))) ? 1 : 0;
+                    return bMatch - aMatch;
+                  })
                   .filter(idea => filterStatus === 'All' || idea.status === filterStatus)
                   .slice(0, 4)
                   .map((idea) => (
@@ -232,7 +231,7 @@ const Dashboard = () => {
                         <motion.div
                           key={i}
                           whileHover={{ scale: 1.02 }}
-                          className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-slate-50 to-blue-50/30 border border-slate-100 cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 hover:border-primary/30"
+                          className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-slate-50 to-blue-50/30 border border-slate-100 cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 hover:border-primary/30 group"
                         >
                           <div className="w-12 h-12 bg-white rounded-2xl shadow-md flex items-center justify-center shrink-0">
                             {act.type.includes('Saved') ? <Save className="w-5 h-5 text-emerald-500" /> : <Sparkles className="w-5 h-5 text-primary" />}
@@ -242,6 +241,16 @@ const Dashboard = () => {
                             <h3 className="font-bold text-slate-900 text-base leading-tight truncate">{act.title}</h3>
                             <p className="text-slate-400 text-xs font-medium mt-1">{act.time}</p>
                           </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRecentActivity(prev => prev.filter((_, idx) => idx !== i));
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-slate-200 transition-all ml-2"
+                            title="Remove"
+                          >
+                            <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+                          </button>
                         </motion.div>
                       ))}
                     </div>

@@ -220,21 +220,25 @@ ${idea.roadmap ? idea.roadmap.map(r => `### Step ${r.step}: ${r.title}\n${r.desc
                   <Clock className="w-3.5 h-3.5" /> {idea.estimatedTime}
                 </div>
               </div>
-              {/* Progress Bar */}
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <motion.div 
-                  className="bg-gradient-to-r from-blue-500 to-emerald-500 h-2 rounded-full relative overflow-hidden"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-                </motion.div>
-              </div>
-              <div className="flex justify-between text-xs text-slate-500 font-mono tracking-wider">
-                <span>Progress</span>
-                <span>{progress}%</span>
-              </div>
+              {isSaved && (
+                <>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <motion.div 
+                      className="bg-gradient-to-r from-blue-500 to-emerald-500 h-2 rounded-full relative overflow-hidden"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                    </motion.div>
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-500 font-mono tracking-wider">
+                    <span>Progress</span>
+                    <span>{progress}%</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
