@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Layers, Box, Check, Clock, Activity, ChevronDown, ChevronUp, Save, FileCode2, Copy, X, Download, ArrowRight, Star, ShieldCheck, Zap } from 'lucide-react';
+import { Layers, Box, Check, Clock, Activity, ChevronDown, ChevronUp, Save, FileCode2, Copy, X, Download, ArrowRight, Star, ShieldCheck, Zap, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getProgress } from '../utils/ideaUtils';
+import { Flame } from 'lucide-react';
 
 const cardVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 30 },
@@ -19,47 +21,29 @@ const IdeaCard = ({ idea }) => {
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
   const [showReadme, setShowReadme] = useState(false);
   const navigate = useNavigate();
-  const { user, refreshSavedCount } = useAuth();
+  const { user, saveIdea, savedIdeas, updateIdeaStatus } = useAuth();
 
-  // Initialise from localStorage so button reflects persisted state on re-render
-  const [isSaved, setIsSaved] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-      return saved.some(i => i.title === idea?.title && (user ? i.userEmail === user.email : true));
-    } catch {
-      return false;
-    }
-  });
+  const savedIdea = savedIdeas.find(i => i.title === idea?.title);
+  const isSaved = !!savedIdea;
+  const currentStatus = savedIdea?.status || 'Pending';
 
   if (!idea) return null;
 
-  // Mock data for enhancement if not present
-  const rating = idea.rating || Math.floor(Math.random() * 3) + 7.5; // 7.5 - 10.0
-  const isUnique = idea.isUnique !== undefined ? idea.isUnique : Math.random() > 0.4;
-  const recommendation = idea.recommendation || (isUnique ? "This aligns with your interest in cutting-edge AI." : "Great for building a solid portfolio in common AI patterns.");
+// Use real data, fallback minimal
+  const rating = idea.rating || 5;
+  const isUnique = idea.uniqueness === 'Unique';
+  const demandLevel = idea.demandLevel || 'Medium';
+  const progress = idea.progress || getProgress(idea.status || currentStatus || 'Pending');
+  const recommendation = idea.recommendation || 'Recommended project idea.';
 
   const handleSave = () => {
-    try {
-      let saved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-      
-      // Prevent duplicates — check by title and userEmail
-      if (!saved.find(i => i.title === idea.title && (user ? i.userEmail === user.email : true))) {
-        const ideaToSave = {
-          ...idea,
-          rating,
-          isUnique,
-          recommendation,
-          userEmail: user?.email || null,
-          savedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        };
-        saved.push(ideaToSave);
-        localStorage.setItem('savedIdeas', JSON.stringify(saved));
-        refreshSavedCount();
-      }
-      setIsSaved(true);
-    } catch (err) {
-      console.error('Failed to save idea:', err);
-    }
+    saveIdea({
+      ...idea,
+      rating,
+      isUnique,
+      recommendation,
+      status: 'Pending'
+    });
   };
 
   const generateReadmeText = () => {
@@ -139,30 +123,60 @@ ${idea.roadmap ? idea.roadmap.map(r => `### Step ${r.step}: ${r.title}\n${r.desc
             <div className="flex flex-wrap gap-2 items-center justify-between w-full">
               <div className="flex gap-2">
                 <div className="text-primary text-[10px] sm:text-xs font-bold tracking-[0.2em] uppercase flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded w-max border border-blue-100 shadow-sm">
-                  <SparkleIcon /> {idea.id || 'Idea'}
+                  <Sparkles className="w-3.5 h-3.5" /> {idea.id || 'Idea'}
                 </div>
                 <div className={`text-[10px] sm:text-xs font-bold tracking-[0.1em] uppercase flex items-center gap-2 px-3 py-1.5 rounded w-max border shadow-sm ${isUnique ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
                   {isUnique ? <Zap className="w-3 h-3 fill-purple-500" /> : <Layers className="w-3 h-3" />} {isUnique ? 'Unique' : 'Common'}
                 </div>
                 <div className="text-amber-600 text-[10px] sm:text-xs font-bold tracking-[0.1em] uppercase flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded w-max border border-amber-100 shadow-sm">
-                  <Star className="w-3 h-3 fill-amber-500" /> {rating.toFixed(1)}/10
+                  <Star className="w-3 h-3 fill-amber-500" /> {rating.toFixed(1)}
                 </div>
+                <div className={`text-orange-600 text-[10px] sm:text-xs font-bold tracking-[0.1em] uppercase flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded w-max border border-orange-100 shadow-sm ${
+                  demandLevel === 'High' ? 'animate-pulse' : ''
+                }`}>
+                  <Flame className="w-3 h-3 fill-orange-500" /> {demandLevel}
+                </div>
+                {isSaved && (
+                  <div className={`text-[10px] sm:text-xs font-bold tracking-[0.1em] uppercase flex items-center gap-2 px-3 py-1.5 rounded w-max border shadow-sm ${
+                    currentStatus === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                    currentStatus === 'Started' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                    'bg-amber-50 text-amber-600 border-amber-100'
+                  }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      currentStatus === 'Completed' ? 'bg-emerald-500' :
+                      currentStatus === 'Started' ? 'bg-blue-500' :
+                      'bg-amber-500'
+                    }`} />
+                    {currentStatus}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSave}
-                  disabled={isSaved}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all duration-300 border ${
-                    isSaved
-                      ? 'bg-green-50 text-green-600 border-green-200 cursor-default'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:shadow-[0_0_8px_rgba(59,130,246,0.2)] shadow-sm'
-                  }`}
-                >
-                  <Save className="w-3.5 h-3.5" /> {isSaved ? 'Saved ✓' : 'Save'}
-                </motion.button>
+                {isSaved ? (
+                  <select 
+                    value={currentStatus}
+                    onChange={(e) => updateIdeaStatus(idea.title, e.target.value)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all duration-300 border cursor-pointer outline-none ${
+                      currentStatus === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                      currentStatus === 'Started' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                      'bg-amber-50 text-amber-600 border-amber-200'
+                    }`}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Started">Started</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleSave}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition-all duration-300 border bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:shadow-[0_0_8px_rgba(59,130,246,0.2)] shadow-sm"
+                  >
+                    <Save className="w-3.5 h-3.5" /> Save
+                  </motion.button>
+                )}
               <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -192,17 +206,34 @@ ${idea.roadmap ? idea.roadmap.map(r => `### Step ${r.step}: ${r.title}\n${r.desc
 
             <h2 className="text-2xl sm:text-3xl font-[900] text-charcoal tracking-tight leading-[1.1]">{idea.title}</h2>
 
-            {/* Metadata Badges */}
-            <div className="flex flex-wrap items-center gap-3 mt-1">
-              <div className={`flex items-center gap-1.5 text-xs font-[800] px-2.5 py-1 rounded-full border ${
-                idea.difficulty === 'Advanced' ? 'bg-red-50 text-red-600 border-red-200'
-                : idea.difficulty === 'Intermediate' ? 'bg-orange-50 text-orange-600 border-orange-200'
-                : 'bg-green-50 text-green-600 border-green-200'
-              }`}>
-                <Activity className="w-3.5 h-3.5" /> {idea.difficulty}
+            {/* Metadata Badges + Progress */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className={`flex items-center gap-1.5 text-xs font-[800] px-2.5 py-1 rounded-full border ${
+                  idea.difficulty === 'Hard' || idea.difficulty === 'Advanced' ? 'bg-red-50 text-red-600 border-red-200'
+                  : idea.difficulty === 'Medium' || idea.difficulty === 'Intermediate' ? 'bg-orange-50 text-orange-600 border-orange-200'
+                  : 'bg-green-50 text-green-600 border-green-200'
+                }`}>
+                  <Activity className="w-3.5 h-3.5" /> {idea.difficulty}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-[800] px-2.5 py-1 rounded-full border bg-blue-50 text-blue-600 border-blue-200">
+                  <Clock className="w-3.5 h-3.5" /> {idea.estimatedTime}
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 text-xs font-[800] px-2.5 py-1 rounded-full border bg-blue-50 text-blue-600 border-blue-200">
-                <Clock className="w-3.5 h-3.5" /> {idea.estimatedTime}
+              {/* Progress Bar */}
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <motion.div 
+                  className="bg-gradient-to-r from-blue-500 to-emerald-500 h-2 rounded-full relative overflow-hidden"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                </motion.div>
+              </div>
+              <div className="flex justify-between text-xs text-slate-500 font-mono tracking-wider">
+                <span>Progress</span>
+                <span>{progress}%</span>
               </div>
             </div>
           </div>

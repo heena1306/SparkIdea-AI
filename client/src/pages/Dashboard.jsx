@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import IdeaCard from '../components/IdeaCard';
+import { motion } from 'framer-motion';
 import { 
   TrendingUp, 
   Save, 
@@ -8,56 +9,74 @@ import {
   Brain, 
   Clock, 
   ArrowRight,
-  Layout,
   Zap,
   Star,
-  Plus,
-  X,
-  CheckCircle2,
-  Circle
+  Plus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import IdeaCard from '../components/IdeaCard';
 
 const Dashboard = () => {
-  const { user, isAuthenticated, generatedCount, savedCount, refreshSavedCount, ideaStats, updateIdeaStats } = useAuth();
-  const [stats, setStats] = useState({ generated: 0, saved: 0, active: 0 });
-  const [savedIdeas, setSavedIdeas] = useState([]);
+  const { user, isAuthenticated, generatedCount, savedCount, completedCount, savedIdeas, ideaStats, analytics, recommendations, userSkills } = useAuth();
   const [recentActivity, setRecentActivity] = useState([]);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('All');
 
   useEffect(() => {
     if (isAuthenticated) {
-      refreshSavedCount();
-      const saved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-      const active = ideaStats.started || 0;
-      
       // Get last generated idea from localStorage
       const lastGenerated = JSON.parse(localStorage.getItem('lastGeneratedIdea') || 'null');
-      const lastSaved = saved.length > 0 ? saved[saved.length - 1] : null;
+      const lastSaved = savedIdeas.length > 0 ? savedIdeas[savedIdeas.length - 1] : null;
 
       const activity = [];
       if (lastGenerated) activity.push({ type: 'Last Generated', title: lastGenerated.title, time: 'Recently' });
       if (lastSaved) activity.push({ type: 'Last Saved', title: lastSaved.title, time: lastSaved.savedAt || 'Recently' });
 
-      setSavedIdeas(saved);
-      setStats({
-        generated: generatedCount || 0,
-        saved: savedCount,
-        active: active
-      });
       setRecentActivity(activity);
     }
-  }, [isAuthenticated, generatedCount, savedCount, ideaStats, savedIdeas.length]);
+  }, [isAuthenticated, savedIdeas]);
 
   if (!isAuthenticated) return null;
 
-  const handleCategoryUpdate = (category) => {
-    updateIdeaStats(category);
-    setShowCategoryModal(false);
-  };
-
   const avatarInitial = user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || '?';
+
+  const stats = [
+    {
+      id: 'completion',
+      title: 'Completion Rate',
+      value: `${analytics.completionRate || 0}%`,
+      subtext: `You completed ${analytics.completedIdeas || 0}/${analytics.totalIdeas || 0} ideas`,
+      icon: TrendingUp,
+      color: 'text-emerald-500',
+      bg: 'bg-emerald-50',
+      count: analytics.completionRate || 0
+    },
+    {
+      id: 'saved',
+      title: 'Saved Ideas Library',
+      value: savedCount,
+      subtext: `${savedCount} ideas in your collection`,
+      icon: Save,
+      color: 'text-blue-500',
+      bg: 'bg-blue-50',
+      count: savedCount
+    },
+    {
+      id: 'pipeline',
+      title: 'Pipeline Overview',
+      value: `${analytics.mostUsedSkill || 'React'}`,
+      subtext: `${ideaStats.pending} pending • Focus: ${analytics.dominantCategory || 'Web'}`,
+      icon: Brain,
+      color: 'text-purple-500',
+      bg: 'bg-purple-50',
+      count: ideaStats.started
+    }
+  ];
+
+  const handleStatClick = (id) => {
+    if (id === 'completion' || id === 'saved' || id === 'pipeline') {
+      const section = document.getElementById('project-library');
+      if (section) section.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="min-h-screen pb-24 bg-slate-50/30">
@@ -66,9 +85,24 @@ const Dashboard = () => {
         {/* Welcome Header */}
         <motion.section 
           initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ opacity: 1, y: 0 }} 
           className="relative overflow-hidden rounded-3xl bg-white p-8 sm:p-12 text-slate-900 shadow-xl border border-slate-100"
         >
+          <motion.div 
+            initial={{ scale: 0.95 }} 
+            animate={{ scale: 1 }} 
+            transition={{ delay: 0.3 }} 
+            className="mx-auto max-w-md text-center"
+          >
+            <Link 
+              to="/generate" 
+              className="glow-button w-full px-12 py-6 text-xl font-black rounded-3xl flex items-center justify-center gap-4 shadow-2xl hover:shadow-[0_25px_50px_-12px_rgba(59,130,246,0.25)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 mx-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
+            >
+              <Plus className="w-8 h-8" />
+              + Generate New Idea
+              <Sparkles className="w-7 h-7 group-hover:rotate-180 transition-transform duration-700" />
+            </Link>
+          </motion.div>
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
             <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
               <span className="text-4xl font-black text-white">{avatarInitial}</span>
@@ -78,6 +112,7 @@ const Dashboard = () => {
                 Welcome, <span className="text-blue-600">{user?.name || 'Developer'}</span>
               </h1>
               <p className="text-slate-500 text-lg font-medium">{user?.email}</p>
+              <p className="text-slate-400 text-xl mt-1 font-medium">Turn your ideas into impactful real-world solutions 🚀</p>
             </div>
           </div>
           {/* Decorative elements */}
@@ -87,86 +122,91 @@ const Dashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            onClick={() => setShowCategoryModal(true)}
-            className="glass-card p-8 flex flex-col items-center text-center group hover:border-primary/30 transition-all duration-300 cursor-pointer"
-          >
-            <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Zap className="w-7 h-7" />
-            </div>
-            <h3 className="text-4xl font-black text-slate-900 mb-1">{stats.generated}</h3>
-            <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-4">Total Ideas Generated</p>
-            
-            <div className="grid grid-cols-3 gap-2 w-full pt-4 border-t border-slate-100">
-              <div className="flex flex-col items-center">
-                <span className="text-xs font-black text-emerald-500">{ideaStats.completed || 0}</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase">Done</span>
-              </div>
-              <div className="flex flex-col items-center border-x border-slate-100 px-2">
-                <span className="text-xs font-black text-blue-500">{ideaStats.started || 0}</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase">In Progress</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-xs font-black text-amber-500">{ideaStats.pending || 0}</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase">Queue</span>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card p-8 flex flex-col items-center text-center group hover:border-emerald-300 transition-all duration-300"
-          >
-            <div className="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Save className="w-7 h-7" />
-            </div>
-            <h3 className="text-4xl font-black text-slate-900 mb-1">{stats.saved}</h3>
-            <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Saved Ideas Count</p>
-          </motion.div>
-
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="glass-card p-8 flex flex-col items-center text-center group hover:border-amber-300 transition-all duration-300"
-          >
-            <div className="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Layout className="w-7 h-7" />
-            </div>
-            <h3 className="text-4xl font-black text-slate-900 mb-1">{stats.active}</h3>
-            <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Active Projects</p>
-          </motion.div>
+          {stats.map((stat, i) => {
+            const Icon = stat.icon;
+            return (
+              <motion.div 
+                key={stat.id}
+                initial={{ y: 20, opacity: 0 }} 
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 * (i + 1) }}
+                onClick={() => handleStatClick(stat.id)}
+                className="glass-card p-8 flex flex-col group hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-xl relative overflow-hidden cursor-pointer"
+              >
+                <div className={`w-14 h-14 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                  <Icon className="w-7 h-7" />
+                </div>
+                <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mb-1">{stat.title}</p>
+                <h3 className="text-2xl font-black text-slate-900 mb-1">{stat.value}</h3>
+                <p className="text-slate-400 text-xs font-medium">{stat.subtext}</p>
+                
+                {stat.id === 'generated' && (
+                  <div className="grid grid-cols-3 gap-2 w-full pt-6 mt-6 border-t border-slate-100">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-emerald-500">{ideaStats.completed || 0}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Done</span>
+                    </div>
+                    <div className="flex flex-col border-x border-slate-100 px-2">
+                      <span className="text-sm font-black text-blue-500">{ideaStats.started || 0}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Started</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-amber-500">{ideaStats.pending || 0}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Pending</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Decorative background element */}
+                <div className={`absolute -right-4 -bottom-4 w-24 h-24 ${stat.bg} rounded-full opacity-10 group-hover:scale-150 transition-transform`} />
+              </motion.div>
+            );
+          })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div id="project-library" className="grid grid-cols-1 lg:grid-cols-3 gap-8 scroll-mt-12">
           {/* Saved Ideas Section */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-[900] text-slate-900 flex items-center gap-3">
                 <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
-                Saved Ideas
+                Your Project Library
               </h2>
-              <Link to="/saved" className="text-primary font-bold text-sm hover:underline flex items-center gap-1">
-                View All <ArrowRight className="w-4 h-4" />
-              </Link>
+              <div className="flex items-center gap-4">
+                <select 
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-600 outline-none focus:border-primary transition-colors"
+                >
+                  <option value="All">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Started">Started</option>
+                  <option value="Completed">Completed</option>
+                </select>
+                <Link to="/saved" className="text-primary font-bold text-sm hover:underline flex items-center gap-1">
+                  View All <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {savedIdeas.length > 0 ? (
-                savedIdeas.slice(0, 4).map((idea) => (
-                  <IdeaCard key={idea.id || idea.title} idea={idea} />
-                ))
+              {savedIdeas?.length > 0 ? (
+                savedIdeas
+                  .sort((a, b) => (userSkills?.some(skill => b.tags?.some(tag => tag.toLowerCase().includes(skill.toLowerCase())) ? 1 : 0) - (userSkills?.some(skill => a.tags?.some(tag => tag.toLowerCase().includes(skill.toLowerCase())) ? 1 : 0)))
+                  .filter(idea => filterStatus === 'All' || idea.status === filterStatus)
+                  .slice(0, 4)
+                  .map((idea) => (
+                    <IdeaCard key={idea.title} idea={idea} />
+                  ))
               ) : (
-                <div className="col-span-full py-12 glass-card flex flex-col items-center justify-center text-slate-400 border-dashed">
-                  <Plus className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="font-bold">No ideas saved yet</p>
-                  <Link to="/generate" className="mt-4 text-primary text-sm font-black hover:underline">
-                    Start generating →
+                <div className="col-span-full py-20 glass-card flex flex-col items-center justify-center text-slate-400 border-dashed border-2">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-4">
+                    <Plus className="w-8 h-8 opacity-20" />
+                  </div>
+                  <p className="font-bold text-slate-500">No projects found</p>
+                  <p className="text-xs font-medium text-slate-400 mb-6">Start by generating a new idea</p>
+                  <Link to="/generate" className="glow-button px-8 py-3 rounded-xl font-black text-sm">
+                    Generate Idea
                   </Link>
                 </div>
               )}
@@ -180,137 +220,105 @@ const Dashboard = () => {
                 <Clock className="w-5 h-5 text-slate-400" />
                 Recent Activity
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentActivity.length > 0 ? (
-                  recentActivity.map((act, i) => (
-                    <div key={i} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:border-primary/20 transition-colors">
-                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                        {act.type.includes('Saved') ? <Save className="w-5 h-5 text-emerald-500" /> : <Sparkles className="w-5 h-5 text-blue-500" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{act.type}</p>
-                        <h3 className="font-bold text-slate-900 truncate">{act.title}</h3>
-                        <p className="text-slate-400 text-[10px] font-medium">{act.time}</p>
-                      </div>
+                  <>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-sm font-bold text-slate-500">Recent Activity</span>
+                      {/* Clear button removed as activity is derived state */}
                     </div>
-                  ))
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
+                      {recentActivity.map((act, i) => (
+                        <motion.div
+                          key={i}
+                          whileHover={{ scale: 1.02 }}
+                          className="flex gap-4 p-5 rounded-2xl bg-gradient-to-r from-slate-50 to-blue-50/30 border border-slate-100 cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 hover:border-primary/30"
+                        >
+                          <div className="w-12 h-12 bg-white rounded-2xl shadow-md flex items-center justify-center shrink-0">
+                            {act.type.includes('Saved') ? <Save className="w-5 h-5 text-emerald-500" /> : <Sparkles className="w-5 h-5 text-primary" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-1">{act.type}</p>
+                            <h3 className="font-bold text-slate-900 text-base leading-tight truncate">{act.title}</h3>
+                            <p className="text-slate-400 text-xs font-medium mt-1">{act.time}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </>
                 ) : (
-                  <p className="text-slate-400 text-sm font-medium text-center py-4">No recent activity</p>
+                  <div className="text-center py-12 text-slate-400">
+                    <Clock className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p className="text-sm font-medium">No recent activity</p>
+                    <p className="text-xs text-slate-500 mt-1">Your saved/generated ideas will appear here</p>
+                  </div>
                 )}
               </div>
             </section>
 
-            {/* AI Suggestions */}
-            <section className="glass-card p-8 space-y-6 bg-gradient-to-br from-white to-blue-50/30">
+            {/* Analytics Insights */}
+            <section className="glass-card p-8 space-y-6">
               <h2 className="text-xl font-[900] text-slate-900 flex items-center gap-3">
-                <Brain className="w-5 h-5 text-purple-500" />
-                AI Suggestions
+                <TrendingUp className="w-5 h-5 text-emerald-500" />
+                Analytics Insights
               </h2>
-              <div className="space-y-3">
-                <button className="w-full text-left p-4 rounded-2xl bg-white border border-slate-100 hover:border-primary/30 hover:shadow-md transition-all group">
-                  <h3 className="font-bold text-slate-900 text-sm mb-1 group-hover:text-primary transition-colors">Try advanced ideas</h3>
-                  <p className="text-slate-500 text-xs">Push your limits with complex architectures</p>
-                </button>
-                <button className="w-full text-left p-4 rounded-2xl bg-white border border-slate-100 hover:border-primary/30 hover:shadow-md transition-all group">
-                  <h3 className="font-bold text-slate-900 text-sm mb-1 group-hover:text-primary transition-colors">Explore AI + Web projects</h3>
-                  <p className="text-slate-500 text-xs">Integrate LLMs into your next web app</p>
-                </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="p-5 bg-emerald-50/50 border border-emerald-100 rounded-xl flex flex-col">
+                  <span className="font-bold text-emerald-600 text-lg mb-1">Total Ideas</span>
+                  <span className="font-black text-2xl">{analytics.totalIdeas || 0}</span>
+                </div>
+                <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl flex flex-col">
+                  <span className="font-bold text-blue-600 text-lg mb-1">Avg Rating</span>
+                  <span className="font-black text-2xl">{analytics.avgRating || 0}</span>
+                </div>
+                <div className="p-5 bg-orange-50/50 border border-orange-100 rounded-xl flex flex-col">
+                  <span className="font-bold text-orange-600 text-lg mb-1">Unique Ideas</span>
+                  <span className="font-black text-2xl">{analytics.uniqueCount || 0}</span>
+                </div>
+                <div className="p-5 bg-slate-50/50 border border-slate-100 rounded-xl flex flex-col">
+                  <span className="font-bold text-slate-600 text-lg mb-1">Completion</span>
+                  <span className="font-black text-2xl">{analytics.completionRate || 0}%</span>
+                </div>
+                <p className="col-span-full text-slate-600 mt-4 text-sm">{analytics.suggestion}</p>
               </div>
+            </section>
+
+            {/* Recommended for You */}
+            <section className="glass-card p-8 space-y-6">
+              <h2 className="text-xl font-[900] text-slate-900 flex items-center gap-3">
+                <Zap className="w-5 h-5 text-yellow-500" />
+                Recommended for You
+              </h2>
+              <div className="grid grid-cols-1 gap-6 h-[28rem] overflow-hidden">
+                {recommendations.slice(0, 3).map((recIdea, i) => (
+                  <motion.div 
+                    key={recIdea.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 * i }}
+                    whileHover={{ y: -4 }}
+                    className="group"
+                  >
+                    <IdeaCard idea={recIdea} />
+                  </motion.div>
+                ))}
+                {recommendations.length === 0 && (
+                  <div className="text-center py-12 text-slate-400 col-span-1">
+                    <Zap className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                    <p className="text-sm font-medium">Generate ideas to unlock personalized recommendations</p>
+                  </div>
+                )}
+              </div>
+              {recommendations.length === 0 && (
+                <p className="text-slate-400 text-sm text-center py-8">Generate some ideas to get personalized recommendations</p>
+              )}
             </section>
           </div>
         </div>
-
-        {/* Primary Action */}
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="flex justify-center pt-4"
-        >
-          <Link 
-            to="/generate" 
-            className="glow-button group px-10 py-5 text-xl font-black rounded-2xl flex items-center gap-3 shadow-xl hover:shadow-primary/20 transition-all"
-          >
-            <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" /> 
-            Generate New Project
-          </Link>
-        </motion.div>
       </div>
-
-      <AnimatePresence>
-        {showCategoryModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowCategoryModal(false)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl border border-slate-100"
-            >
-              <button 
-                onClick={() => setShowCategoryModal(false)}
-                className="absolute top-6 right-6 p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="mb-8">
-                <h2 className="text-2xl font-black text-slate-900 mb-2">Track Your Progress</h2>
-                <p className="text-slate-500 font-medium">Categorize your generated ideas to keep track of your journey.</p>
-              </div>
-
-              <div className="space-y-4">
-                <button 
-                  onClick={() => handleCategoryUpdate('started')}
-                  className="w-full flex items-center gap-4 p-5 rounded-2xl bg-blue-50 border-2 border-transparent hover:border-blue-200 transition-all group"
-                >
-                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-                    <TrendingUp className="w-6 h-6" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-bold text-slate-900">Started</h3>
-                    <p className="text-xs text-slate-500 font-medium">Ideas you're currently building</p>
-                  </div>
-                </button>
-
-                <button 
-                  onClick={() => handleCategoryUpdate('pending')}
-                  className="w-full flex items-center gap-4 p-5 rounded-2xl bg-amber-50 border-2 border-transparent hover:border-amber-200 transition-all group"
-                >
-                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
-                    <Circle className="w-6 h-6" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-bold text-slate-900">Pending</h3>
-                    <p className="text-xs text-slate-500 font-medium">Saved for future development</p>
-                  </div>
-                </button>
-
-                <button 
-                  onClick={() => handleCategoryUpdate('completed')}
-                  className="w-full flex items-center gap-4 p-5 rounded-2xl bg-emerald-50 border-2 border-transparent hover:border-emerald-200 transition-all group"
-                >
-                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-bold text-slate-900">Completed</h3>
-                    <p className="text-xs text-slate-500 font-medium">Success stories and finished MVPs</p>
-                  </div>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
 
 export default Dashboard;
+

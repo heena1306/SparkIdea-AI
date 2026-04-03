@@ -1,7 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Bookmark, Trash2, Clock, Activity, Check, ChevronDown, ChevronUp, Star, Zap, ShieldCheck, Layers } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Bookmark, 
+  Trash2, 
+  Clock, 
+  Activity, 
+  Check, 
+  ChevronDown, 
+  ChevronUp, 
+  Star, 
+  Zap, 
+  ShieldCheck, 
+  Search, 
+  Filter,
+  X,
+  Plus
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import StatusSelector from '../components/StatusSelector';
+import { getProgress } from '../utils/ideaUtils';
 
 const pageVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -19,13 +38,19 @@ const itemVariants = {
   exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } },
 };
 
-const SavedCard = ({ idea, onRemove }) => {
+const SavedCard = ({ idea, onRemove, onUpdateStatus, onToggleFavorite = () => {}, isFavorite = false }) => {
   const [roadmapOpen, setRoadmapOpen] = useState(false);
 
-  // Use saved data or fallback to defaults
   const rating = idea.rating || 8.5;
   const isUnique = idea.isUnique !== undefined ? idea.isUnique : true;
   const recommendation = idea.recommendation || "Aligns with your AI development goals.";
+  const status = idea.status || 'Pending';
+  const progress = {
+    Pending: 10,
+    Started: 50,
+    Completed: 100
+  }[status] || 10;
+  const impact = idea.impact || 'Useful for building real-world portfolio projects';
 
   return (
     <motion.div
@@ -36,9 +61,9 @@ const SavedCard = ({ idea, onRemove }) => {
       whileHover={{ scale: 1.02, y: -4 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       layout
-      className="glass-card bg-white/80 p-7 border border-slate-200 hover:border-primary/40 group shadow-sm hover:shadow-xl transition-colors duration-300 flex flex-col h-full"
+      className="glass-card bg-white/80 p-7 border border-slate-200 hover:border-primary/40 group shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full cursor-pointer"
     >
-      {/* Top row: date badge + difficulty */}
+      {/* Top row: date badge + metadata */}
       <div className="flex flex-col gap-3 mb-5">
         <div className="flex items-center justify-between">
           <div className="text-xs font-bold tracking-[0.15em] text-primary uppercase bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
@@ -48,20 +73,43 @@ const SavedCard = ({ idea, onRemove }) => {
             <div className={`text-[10px] font-black tracking-wider px-2 py-1 rounded-full uppercase border ${isUnique ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
               {isUnique ? 'Unique' : 'Common'}
             </div>
-            <div className="text-amber-600 text-[10px] font-black tracking-wider px-2 py-1 rounded-full uppercase border border-amber-100 bg-amber-50">
-              <Star className="w-2.5 h-2.5 inline mr-1 fill-amber-500" /> {rating.toFixed(1)}
+            <div className="text-amber-600 text-[10px] font-black tracking-wider px-2 py-1 rounded-full uppercase border border-amber-100 bg-amber-50 flex items-center gap-1">
+              <Star className="w-2.5 h-2.5 fill-amber-500" /> {rating.toFixed(1)}
             </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(idea.title);
+              }}
+              className={`p-1 rounded-full transition-all ${isFavorite ? 'bg-yellow-400 text-white shadow-lg' : 'text-slate-400 hover:text-yellow-500 hover:bg-yellow-50'}`}
+              title="Toggle favorite"
+            >
+              <Star className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Title */}
-      <h3 className="text-xl font-[900] text-charcoal mb-3 tracking-tight group-hover:text-primary transition-colors duration-300 leading-tight">
-        {idea.title}
-      </h3>
+      {/* Title & Status */}
+      <div className="mb-4">
+        <h3 className="text-xl font-[900] text-charcoal mb-3 tracking-tight group-hover:text-primary transition-colors duration-300 leading-tight">
+          {idea.title}
+        </h3>
+        <StatusSelector 
+          status={status} 
+          onStatusChange={(newStatus) => onUpdateStatus(idea.title, newStatus)} 
+        />
+      </div>
 
       {/* Description */}
-      <p className="text-slate-500 font-medium mb-5 text-sm leading-relaxed">{idea.description}</p>
+      <p className="text-slate-500 font-medium mb-2 text-sm leading-relaxed line-clamp-2">
+        {idea.description}
+      </p>
+
+      {/* Impact line */}
+      <p className="text-xs text-slate-600 font-semibold italic bg-slate-50 px-3 py-1.5 rounded-lg mb-5">
+        {impact}
+      </p>
 
       {/* Recommendation */}
       <div className="mb-5 p-3 rounded-xl bg-blue-50/50 border border-blue-100 flex items-start gap-2">
@@ -69,6 +117,24 @@ const SavedCard = ({ idea, onRemove }) => {
         <p className="text-[11px] text-slate-600 font-bold leading-relaxed">
           {recommendation}
         </p>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mb-5">
+        <div className="flex justify-between text-xs text-slate-500 mb-1">
+          <span>Progress</span>
+          <span>{progress}%</span>
+        </div>
+        <div className="w-full bg-slate-100 rounded-full h-2">
+          <motion.div 
+            className="h-2 bg-gradient-to-r from-primary to-emerald-500 rounded-full relative overflow-hidden"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+          </motion.div>
+        </div>
       </div>
 
       {/* Meta badges */}
@@ -96,21 +162,6 @@ const SavedCard = ({ idea, onRemove }) => {
               {tech}
             </span>
           ))}
-        </div>
-      )}
-
-      {/* Features */}
-      {idea.features && idea.features.length > 0 && (
-        <div className="mb-5 bg-slate-50/50 rounded-xl p-4 border border-slate-100">
-          <h4 className="text-xs font-[800] text-charcoal uppercase tracking-wider mb-3">Key Features</h4>
-          <ul className="space-y-2">
-            {idea.features.slice(0, 3).map((f, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-slate-600 font-medium">
-                <Check className="w-3.5 h-3.5 text-primary stroke-[3px] mt-0.5 flex-shrink-0" />
-                {f}
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 
@@ -154,52 +205,73 @@ const SavedCard = ({ idea, onRemove }) => {
 
       {/* Footer */}
       <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
-        <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={() => onRemove(idea.title)}
-          className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-colors duration-200 cursor-pointer"
-        >
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(idea.title);
+            }}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-all duration-200 cursor-pointer"
+          >
           <Trash2 className="w-3.5 h-3.5" /> Delete
         </motion.button>
-        <p className="text-[11px] text-slate-400 font-medium">Saved locally</p>
+        <p className="text-[11px] text-slate-400 font-medium">Synced</p>
       </div>
     </motion.div>
   );
 };
 
 const SavedIdeasPage = () => {
-  const [savedIdeas, setSavedIdeas] = useState([]);
-  const { refreshSavedCount } = useAuth();
+  const navigate = useNavigate();
+  const { savedIdeas, removeIdea, updateIdeaStatus, isAuthenticated } = useAuth();
+  
+  console.log('SavedIdeasPage render:', { savedIdeasLength: savedIdeas?.length || 0, isAuthenticated });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [filterRating, setFilterRating] = useState('All');
+  const [filterUniqueness, setFilterUniqueness] = useState('All');
+  const [favorites, setFavorites] = useState(new Set());
 
   useEffect(() => {
-    try {
-      const data = localStorage.getItem('savedIdeas');
-      const user = JSON.parse(localStorage.getItem('authUser') || 'null');
-      if (data) {
-        let ideas = JSON.parse(data);
-        if (user) {
-          // If logged in, show only that user's saved ideas
-          ideas = ideas.filter(i => i.userEmail === user.email);
-        }
-        setSavedIdeas(ideas);
-      }
-    } catch {
-      setSavedIdeas([]);
+    const savedFavorites = localStorage.getItem('savedFavorites');
+    if (savedFavorites) {
+      setFavorites(new Set(JSON.parse(savedFavorites)));
     }
   }, []);
 
-  // Remove by title and userEmail
-  const removeIdea = (title) => {
-    const user = JSON.parse(localStorage.getItem('authUser') || 'null');
-    const allSaved = JSON.parse(localStorage.getItem('savedIdeas') || '[]');
-    const filtered = allSaved.filter(idea => !(idea.title === title && (user ? idea.userEmail === user.email : true)));
-    localStorage.setItem('savedIdeas', JSON.stringify(filtered));
-    refreshSavedCount();
-    
-    // Update local state to reflect removal
-    setSavedIdeas(savedIdeas.filter(idea => idea.title !== title));
+  useEffect(() => {
+    localStorage.setItem('savedFavorites', JSON.stringify(Array.from(favorites)));
+  }, [favorites]);
+
+  const toggleFavorite = (ideaTitle) => {
+    const newFavorites = new Set(favorites);
+    if (newFavorites.has(ideaTitle)) {
+      newFavorites.delete(ideaTitle);
+    } else {
+      newFavorites.add(ideaTitle);
+    }
+    setFavorites(newFavorites);
   };
+
+  const filteredIdeas = useMemo(() => {
+    return savedIdeas.filter(idea => {
+      const matchesSearch = idea.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           idea.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'All' || filterStatus === 'Favorites' || idea.status === filterStatus;
+      const matchesRating = filterRating === 'All' || (
+        filterRating === 'High' ? idea.rating >= 9 :
+        filterRating === 'Medium' ? (idea.rating >= 8 && idea.rating < 9) :
+        idea.rating < 8
+      );
+      const matchesUnique = filterUniqueness === 'All' || (
+        filterUniqueness === 'Unique' ? idea.isUnique : !idea.isUnique
+      );
+      const matchesFavorite = filterStatus !== 'Favorites' || favorites.has(idea.title);
+
+      return matchesSearch && matchesStatus && matchesRating && matchesUnique && matchesFavorite;
+    });
+  }, [savedIdeas, searchTerm, filterStatus, filterRating, filterUniqueness, favorites]);
 
   return (
     <motion.div
@@ -207,42 +279,128 @@ const SavedIdeasPage = () => {
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="w-full max-w-[100rem] mx-auto flex-grow mt-8 sm:mt-12 px-2"
+      className="w-full max-w-[100rem] mx-auto flex-grow mt-8 sm:mt-12 px-4"
     >
       {/* Page Header */}
-      <motion.div variants={itemVariants} className="mb-12">
-        <h1 className="text-4xl md:text-5xl font-[900] mb-3 tracking-tighter flex items-center gap-4 text-charcoal">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 border border-blue-200 flex items-center justify-center shadow-sm">
-            <Bookmark className="w-6 h-6 dual-tone-icon" />
-          </div>
-          Saved Library
-        </h1>
-        <p className="text-slate-500 text-base font-medium max-w-xl leading-relaxed">
-          {savedIdeas.length > 0
-            ? `${savedIdeas.length} idea${savedIdeas.length > 1 ? 's' : ''} saved — persisted in your browser.`
-            : 'Your generated project ideas, saved locally.'}
-        </p>
-      </motion.div>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
+        <motion.div variants={itemVariants}>
+          <h1 className="text-4xl md:text-5xl font-[900] mb-3 tracking-tighter flex items-center gap-4 text-charcoal">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 border border-blue-200 flex items-center justify-center shadow-sm">
+              <Bookmark className="w-6 h-6 text-primary" />
+            </div>
+            Saved Library
+          </h1>
+          <p className="text-slate-500 text-base font-medium max-w-xl leading-relaxed">
+            {savedIdeas.length > 0
+              ? `${savedIdeas.length} idea${savedIdeas.length > 1 ? 's' : ''} saved — manage your journey from concept to completion.`
+              : 'Your generated project ideas, saved locally and synced with your account.'}
+          </p>
+        </motion.div>
 
-      {/* Empty State */}
-      {savedIdeas.length === 0 ? (
+        {/* Generate Button */}
+        <Link
+          to="/generate"
+          className="px-8 py-4 bg-gradient-to-r from-primary to-blue-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-primary/50 hover:from-blue-600 hover:to-blue-700 flex items-center gap-3 transition-all duration-300 whitespace-nowrap group"
+        >
+          + Generate New Idea
+          <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+        </Link>
+
+        {/* Search & Filter Bar */}
+        <motion.div variants={itemVariants} className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Search ideas..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all w-full sm:w-64"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 sm:flex-none">
+              <select 
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full sm:w-auto appearance-none pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:border-primary outline-none cursor-pointer"
+              >
+                <option value="All">All Status</option>
+                <option value="Favorites">⭐ Favorites</option>
+                <option value="Pending">Pending</option>
+                <option value="Started">Started</option>
+                <option value="Completed">Completed</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+
+            <div className="relative flex-1 sm:flex-none">
+              <select 
+                value={filterUniqueness}
+                onChange={(e) => setFilterUniqueness(e.target.value)}
+                className="w-full sm:w-auto appearance-none pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:border-primary outline-none cursor-pointer"
+              >
+                <option value="All">All types</option>
+                <option value="Unique">Unique</option>
+                <option value="Common">Common</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Results Section */}
+{(savedIdeas || []).length === 0 ? (
         <motion.div
           variants={itemVariants}
-          className="w-full py-24 flex flex-col items-center justify-center text-center glass-card border border-blue-100 bg-white/60"
+          className="w-full py-24 flex flex-col items-center justify-center text-center glass-card border-dashed border-2 border-slate-200 bg-slate-50/50"
         >
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 border border-slate-200 flex items-center justify-center mb-6 shadow-sm">
-            <Bookmark className="w-8 h-8 text-primary/40" />
+          <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mb-6 shadow-sm">
+            <Plus className="w-8 h-8 text-slate-300" />
           </div>
-          <h3 className="text-2xl font-[900] text-charcoal mb-2">No saved ideas yet</h3>
-          <p className="text-slate-500 max-w-sm font-medium text-sm">
-            Go to the Generator, create some ideas and hit <strong>Save</strong> on any card — they'll appear here.
+          <h3 className="text-2xl font-[900] text-charcoal mb-2">No ideas saved yet</h3>
+          <p className="text-slate-500 max-w-sm font-medium text-sm mb-8">
+            {!isAuthenticated ? 'Please login to see your saved ideas.' : 'Generate and save your first idea.'}
           </p>
+          <Link to="/generate" className="glow-button px-8 py-3 rounded-xl font-black flex items-center gap-2">
+            + Generate Idea
+          </Link>
+        </motion.div>
+      ) : filteredIdeas.length === 0 ? (
+        <motion.div
+          variants={itemVariants}
+          className="w-full py-24 flex flex-col items-center justify-center text-center glass-card bg-white/60"
+        >
+          <Filter className="w-12 h-12 text-slate-200 mb-4" />
+          <h3 className="text-xl font-black text-slate-900 mb-1">No matches found</h3>
+          <p className="text-slate-500 text-sm font-medium mb-6">Try adjusting your filters or search term</p>
+          <button 
+            onClick={() => { setSearchTerm(''); setFilterStatus('All'); setFilterUniqueness('All'); }}
+            className="text-primary font-bold text-sm hover:underline"
+          >
+            Clear all filters
+          </button>
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
-          <AnimatePresence>
-            {savedIdeas.map((idea) => (
-              <SavedCard key={idea.title} idea={idea} onRemove={removeIdea} />
+          <AnimatePresence mode="popLayout">
+            {filteredIdeas.map((idea) => (
+              <motion.div 
+                key={idea.title} 
+                whileHover={{ scale: 1.01 }}
+                className="cursor-pointer"
+                onClick={() => navigate(`/idea/${idea.id || idea.title.replace(/\\s+/g, '-').toLowerCase()}`, { state: { idea } })}
+              >
+                <SavedCard 
+                  idea={idea} 
+                  onRemove={removeIdea} 
+                  onUpdateStatus={updateIdeaStatus}
+                  onToggleFavorite={() => toggleFavorite(idea.title)}
+                  isFavorite={favorites.has(idea.title)}
+                />
+              </motion.div>
             ))}
           </AnimatePresence>
         </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, Terminal, BookOpen, Layers, ArrowUp, Search, X, TrendingUp, Zap, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import IdeaCard from '../components/IdeaCard';
+import { useAuth } from '../context/AuthContext';
 
 const SKILLS_SUGGESTIONS = [
   'React', 'Node.js', 'Python', 'AI', 'Machine Learning', 
@@ -57,6 +58,7 @@ const TRENDING_IDEAS = [
 ];
 
 const GeneratorPage = () => {
+  const { saveIdea, userSkills, updateUserSkills } = useAuth();
   const [formData, setFormData] = useState({
     skills: '',
     interest: '',
@@ -94,8 +96,19 @@ const GeneratorPage = () => {
     }
   }, [formData.interest]);
 
-  const generateSmartIdeas = (skills, interest, level) => {
-    // This is a mock AI generation logic
+  const generateSmartIdeas = (skills, interest, level, userSkills = []) => {
+    // Skill matching score for prioritization
+    const getSkillMatchScore = (ideaTags, userSkills) => {
+      let score = 0;
+      ideaTags.forEach(tag => {
+        if (userSkills.some(skill => skill.toLowerCase().includes(tag.toLowerCase()) || tag.toLowerCase().includes(skill.toLowerCase()))) {
+          score += 2;
+        }
+      });
+      return score;
+    };
+
+    // Base ideas
     const baseIdeas = [
       {
         title: `${interest} Analytics Platform`,
@@ -109,7 +122,8 @@ const GeneratorPage = () => {
           { step: 2, title: 'Core Implementation', desc: 'Build the primary data processing engines.' },
           { step: 3, title: 'UI/UX Polish', desc: 'Design and implement the user interface with smooth transitions.' }
         ],
-        githubStructure: ['src/components', 'src/hooks', 'src/services', 'src/utils', 'api/routes']
+        githubStructure: ['src/components', 'src/hooks', 'src/services', 'src/utils', 'api/routes'],
+        skillScore: getSkillMatchScore([...skills.slice(0, 3), 'React', 'Tailwind CSS', 'Chart.js'], userSkills)
       },
       {
         title: `AI-Powered ${interest} Assistant`,
@@ -123,7 +137,8 @@ const GeneratorPage = () => {
           { step: 2, title: 'Frontend Development', desc: 'Create a conversational UI for the assistant.' },
           { step: 3, title: 'Beta Testing', desc: 'Gather user feedback and optimize AI responses.' }
         ],
-        githubStructure: ['src/ai', 'src/components', 'src/context', 'server/controllers', 'docs/api']
+        githubStructure: ['src/ai', 'src/components', 'src/context', 'server/controllers', 'docs/api'],
+        skillScore: getSkillMatchScore([...skills.slice(0, 2), 'OpenAI API', 'Node.js', 'Next.js'], userSkills)
       },
       {
         title: `Open Source ${interest} Tool`,
@@ -137,10 +152,13 @@ const GeneratorPage = () => {
           { step: 2, title: 'MVP Build', desc: 'Focus on the most critical feature for launch.' },
           { step: 3, title: 'Scaling', desc: 'Optimize for performance and add more advanced features.' }
         ],
-        githubStructure: ['src/core', 'src/plugins', 'tests/unit', 'configs', 'scripts']
+        githubStructure: ['src/core', 'src/plugins', 'tests/unit', 'configs', 'scripts'],
+        skillScore: getSkillMatchScore([...skills.slice(0, 4), 'TypeScript', 'Docker', 'GitHub Actions'], userSkills)
       }
     ];
-    return baseIdeas;
+
+    // Sort by skill match score (highest first)
+    return baseIdeas.sort((a, b) => b.skillScore - a.skillScore);
   };
 
   const handleSubmit = async (e) => {
@@ -155,7 +173,7 @@ const GeneratorPage = () => {
       // Simulate AI generation delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const generatedIdeas = generateSmartIdeas(skillsArray, formData.interest, formData.level);
+      const generatedIdeas = generateSmartIdeas(skillsArray, formData.interest, formData.level, userSkills);
       setIdeas(generatedIdeas);
       
       // Track generated count
@@ -341,9 +359,15 @@ const GeneratorPage = () => {
                 animate={{ opacity: 1 }}
                 className="grid grid-cols-1 xl:grid-cols-3 gap-8"
              >
-                {ideas.map((idea, index) => (
-                  <IdeaCard key={index} idea={{...idea, id: index + 1}} />
-                ))}
+                {ideas.map((idea, index) => {
+                  const enhancedIdea = {
+                    ...idea, 
+                    id: index + 1,
+                    skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
+                    interest: formData.interest
+                  };
+                  return <IdeaCard key={index} idea={enhancedIdea} />;
+                })}
              </motion.div>
            )}
 
