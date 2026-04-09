@@ -3,7 +3,7 @@
 **SparkIdea AI** is an intelligent idea-generation platform designed to help users brainstorm, validate, and refine innovative project ideas using AI. It streamlines creativity by providing structured, relevant, and actionable suggestions.
 
 
-🌟 Features
+🌟 Features:
 
 * 💡 **AI-Powered Idea Generation**
   Generate unique and practical ideas instantly using advanced AI models.
@@ -22,7 +22,7 @@
 
 ---
 
-🛠️ Tech Stack
+🛠️ Tech Stack:
 
 * **Frontend:** React.js, Tailwind CSS
 * **Backend:** Node.js / Express (if used)
@@ -31,28 +31,23 @@
 
 ---
 
-📸 Screenshots
-
-*Add your UI screenshots here (Homepage, Idea generation page, etc.)*
-
----
 
 🚀 Getting Started
 
-### 1️⃣ Clone the Repository
+### 1️⃣ Clone the Repository:
 
 ```bash
 git clone https://github.com/heena1306/SparkIdea-AI.git
 cd SparkIdea-AI
 ```
 
-### 2️⃣ Install Dependencies
+### 2️⃣ Install Dependencies:
 
 ```bash
 npm install
 ```
 
-### 3️⃣ Run the Project
+### 3️⃣ Run the Project:
 
 ```bash
 npm start
@@ -60,7 +55,7 @@ npm start
 
 ---
 
-📂 Project Structure
+📂 Project Structure:
 
 ```
 SparkIdea-AI/
@@ -74,7 +69,7 @@ SparkIdea-AI/
 
 ---
 
-🎯 Use Cases
+🎯 Use Cases:
 
 * Students looking for project ideas
 * Hackathon participants
@@ -83,13 +78,13 @@ SparkIdea-AI/
 
 ---
 
-📈 Impact
+📈 Impact:
 
 This project simplifies the idea-generation process by combining AI with structured thinking, helping users move from **confusion → clarity → execution** faster.
 
 ---
 
-🔮 Future Improvements
+🔮 Future Improvements:
 
 * User authentication & saved ideas
 * Idea rating & feedback system
@@ -98,13 +93,13 @@ This project simplifies the idea-generation process by combining AI with structu
 
 ---
 
-🤝 Contributing
+🤝 Contributing:
 
 Contributions are welcome! Feel free to fork the repo and submit a pull request.
 
 ---
 
-📬 Contact
+📬 Contact:
 
 **Heena Tabassum**
 GitHub: https://github.com/heena1306
